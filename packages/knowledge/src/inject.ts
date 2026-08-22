@@ -11,7 +11,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { KnowledgeEntry } from '@dsh-plugins/shared'
+import type { KnowledgeEntry } from './shared/index.js'
 
 /** 知识注入消息的持久化来源标记。 */
 export interface KnowledgeInjectionSource {

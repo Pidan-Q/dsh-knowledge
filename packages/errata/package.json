@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-plugins/errata",
+  "name": "@dsh-knowledge/errata",
   "version": "0.1.0",
   "description": "Automatic error capture and pre-execution warning injection for DeepSeek Harness",
   "type": "module",
@@ -27,7 +27,7 @@
     }
   },
   "dependencies": {
-    "@dsh-plugins/shared": "file:../shared",
+    "@dsh-knowledge/shared": "file:../shared",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
@@ -46,7 +46,7 @@
     "@deepseek-ai/dsh-tools": "0.1.0-rc.8",
     "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.8",
     "@deepseek-ai/dsh-typert-registry": "0.1.0-rc.8",
-    "@dsh-plugins/shared": "file:../shared",
+    "@dsh-knowledge/shared": "file:../shared",
     "vitest": "^3.2.4"
   },
   "license": "MIT",

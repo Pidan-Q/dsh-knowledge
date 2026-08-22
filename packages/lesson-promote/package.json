@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-plugins/lesson-promote",
+  "name": "@dsh-knowledge/lesson-promote",
   "version": "0.3.0",
   "description": "Promote repeated error lessons (错题本) into DSH skills: draft generation, approval with same-name conflict guard",
   "type": "module",
@@ -27,7 +27,7 @@
     }
   },
   "dependencies": {
-    "@dsh-plugins/shared": "file:../shared"
+    "@dsh-knowledge/shared": "file:../shared"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -44,7 +44,7 @@
     "@deepseek-ai/dsh-session": "0.1.0-rc.8",
     "@deepseek-ai/dsh-skill": "0.1.0-rc.8",
     "@deepseek-ai/dsh-tools": "0.1.0-rc.8",
-    "@dsh-plugins/shared": "file:../shared",
+    "@dsh-knowledge/shared": "file:../shared",
     "vitest": "^3.2.4"
   },
   "license": "MIT",

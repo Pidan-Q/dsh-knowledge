@@ -8,11 +8,11 @@
  * 不注册任何工具：
  *
  *   - id: lesson-promote-host
- *     name: '@dsh-plugins/lesson-promote/host'
+ *     name: '@dsh-knowledge/lesson-promote/host'
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { EntryStore, findProjectRoot, type ErrorLesson } from '@dsh-plugins/shared'
+import { EntryStore, findProjectRoot, type ErrorLesson } from '@dsh-knowledge/shared'
 import { draftSkill, scanPromotable } from './promote.js'
 import { approveDraft, conflictCheckFor, type LessonPromoteResult } from './manage.js'
 import { resolveConfig, type Config, type LessonPromoteStore } from './index.js'

@@ -8,7 +8,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { EntryCategory, KnowledgeEntry } from '@dsh-plugins/shared'
+import type { EntryCategory, KnowledgeEntry } from './shared/index.js'
 import { nextEntryId, type KnowledgeService } from './store.js'
 
 /** 知识条目分类枚举。 */

@@ -10,7 +10,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { homedir } from 'node:os'
-import { EntryStore, type EntryCategory, type KnowledgeEntry } from '@dsh-plugins/shared'
+import { EntryStore, type EntryCategory, type KnowledgeEntry } from './shared/index.js'
 
 /**
  * 把路径规范化为正斜杠分隔（Windows 兼容关键）。

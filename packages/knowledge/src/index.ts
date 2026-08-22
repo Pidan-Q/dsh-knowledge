@@ -1,5 +1,5 @@
 /**
- * @dsh-plugins/knowledge —— DSH 双层知识库插件。
+ * @dsh-knowledge/knowledge —— DSH 双层知识库插件。
  *
  * 提供三个工具：
  *   kb_search   在项目层 + 全局层知识库中做 BM25 全文检索；
@@ -49,7 +49,7 @@ export function apply(ctx: Context, rawConfig: Partial<Config> = {}): void {
     injectKnowledgeMax: config.injectKnowledgeMax,
   })
   // 注意：宿主端 Remote 服务（知识库设置页数据源）由 host 入口
-  // （@dsh-plugins/knowledge/host）在 host 平面提供；本入口是 agent 平面
+  // （@dsh-knowledge/knowledge/host）在 host 平面提供；本入口是 agent 平面
   // 工具插件，不重复注册 service（Web profile 里 agent 平面按会话挂载）。
 }
 

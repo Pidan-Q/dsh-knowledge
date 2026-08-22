@@ -1,5 +1,5 @@
 /**
- * DSH 错误捕获与执行前预警注入插件（@dsh-plugins/errata）。
+ * DSH 错误捕获与执行前预警注入插件（@dsh-knowledge/errata）。
  *
  * 订阅 `tools/result`（emit）观察失败的工具调用并沉淀为项目层教训条目，
  * 订阅 `tools/pre-execute`（waterfall，prepend）在命中失败模式时向 agent
@@ -106,7 +106,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     yield registerWarning(ctx, lessons)
   }, 'errata')
   // 注意：宿主端 Remote 服务（错题设置页数据源）由 host 入口
-  // （@dsh-plugins/errata/host）在 host 平面提供；本入口是 agent 平面
+  // （@dsh-knowledge/errata/host）在 host 平面提供；本入口是 agent 平面
   // 工具插件，不重复注册 service（Web profile 里 agent 平面按会话挂载，
   // 重复注册会与宿主 Gateway 的 errata 命名空间冲突）。
 }

@@ -1,5 +1,5 @@
 /**
- * DSH 错题本晋级插件（@dsh-plugins/lesson-promote，原 skill-manager v3.0 更名）。
+ * DSH 错题本晋级插件（@dsh-knowledge/lesson-promote，原 skill-manager v3.0 更名）。
  *
  * 职责：把项目层 .dsh/knowledge/ 中沉淀的教训条目（ErrorLesson，即"错题本"）
  * 在记录次数过多（errorCount 达到阈值且状态 distilled）时晋级为 DSH 技能——
@@ -17,11 +17,11 @@
  *   由其他来源（dsh-skills-manager 库 / runtime / user / bundled 等）占用，
  *   拒绝批准并提示，保证已装插件优先、不产生遮蔽。
  *
- * @module @dsh-plugins/lesson-promote
+ * @module @dsh-knowledge/lesson-promote
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { EntryStore, findProjectRoot, type ErrorLesson } from '@dsh-plugins/shared'
+import { EntryStore, findProjectRoot, type ErrorLesson } from '@dsh-knowledge/shared'
 import { draftSkill, scanPromotable } from './promote.js'
 import { approveDraft, conflictCheckFor, registerLessonPromoteTool, type LessonPromoteResult } from './manage.js'
 

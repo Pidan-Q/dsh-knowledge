@@ -18,7 +18,7 @@
 
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
-import { isErrorLesson, type EntryStore, type ErrorLesson } from '@dsh-plugins/shared'
+import { isErrorLesson, type EntryStore, type ErrorLesson } from '@dsh-knowledge/shared'
 
 /** 草稿状态：pending 待批准；approved 已批准（正式技能已落盘）。 */
 export type DraftStatus = 'pending' | 'approved'

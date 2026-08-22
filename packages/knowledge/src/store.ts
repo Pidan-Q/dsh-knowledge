@@ -1,7 +1,7 @@
 /**
  * KnowledgeService —— DSH 双层知识库的内存服务。
  *
- * 内部使用 @dsh-plugins/shared 的 EntryStore 做磁盘持久化（项目层写入
+ * 内部使用 @dsh-knowledge/shared 的 EntryStore 做磁盘持久化（项目层写入
  * <workspace>/.dsh/knowledge，全局层写入 <dshHome>/knowledge/global），
  * 用 Bm25Index 对全部可见条目做中文/英文混合全文检索。项目根目录默认
  * 通过 findProjectRoot(process.cwd()) 解析。
@@ -14,7 +14,7 @@ import {
   findProjectRoot,
   type EntryCategory,
   type KnowledgeEntry,
-} from '@dsh-plugins/shared'
+} from './shared/index.js'
 
 /** KnowledgeService 构造选项。 */
 export interface KnowledgeServiceOptions {

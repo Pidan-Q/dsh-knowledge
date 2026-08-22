@@ -43,7 +43,7 @@ const workspaceParam = {
   name: 'workspace',
   wire: 'workspace',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/errata#workspace', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/errata#workspace', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -51,16 +51,16 @@ const lessonIdParam = {
   name: 'lessonId',
   wire: 'lessonId',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/errata#lessonId', schema: z.string() },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/errata#lessonId', schema: z.string() },
 }
 
 export const TYPERT = {
-  package: '@dsh-plugins/errata',
+  package: '@dsh-knowledge/errata',
   face: 'host' as const,
   schemas: [],
   invocations: [
     {
-      id: '@dsh-plugins/errata#errata/list',
+      id: '@dsh-knowledge/errata#errata/list',
       service: 'errata',
       namespace: 'errata',
       method: 'list',
@@ -68,13 +68,13 @@ export const TYPERT = {
       parameters: [workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/errata#errata/list:result',
+        typeSymbol: '@dsh-knowledge/errata#errata/list:result',
         schema: listResultSchema,
       },
       sourceLocation: { file: 'packages/errata/src/remote.ts', line: 63, column: 3 },
     },
     {
-      id: '@dsh-plugins/errata#errata/archive',
+      id: '@dsh-knowledge/errata#errata/archive',
       service: 'errata',
       namespace: 'errata',
       method: 'archive',
@@ -82,13 +82,13 @@ export const TYPERT = {
       parameters: [lessonIdParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/errata#errata/archive:result',
+        typeSymbol: '@dsh-knowledge/errata#errata/archive:result',
         schema: lessonResultSchema,
       },
       sourceLocation: { file: 'packages/errata/src/remote.ts', line: 69, column: 3 },
     },
     {
-      id: '@dsh-plugins/errata#errata/unarchive',
+      id: '@dsh-knowledge/errata#errata/unarchive',
       service: 'errata',
       namespace: 'errata',
       method: 'unarchive',
@@ -96,13 +96,13 @@ export const TYPERT = {
       parameters: [lessonIdParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/errata#errata/unarchive:result',
+        typeSymbol: '@dsh-knowledge/errata#errata/unarchive:result',
         schema: lessonResultSchema,
       },
       sourceLocation: { file: 'packages/errata/src/remote.ts', line: 77, column: 3 },
     },
     {
-      id: '@dsh-plugins/errata#errata/delete',
+      id: '@dsh-knowledge/errata#errata/delete',
       service: 'errata',
       namespace: 'errata',
       method: 'delete',
@@ -110,13 +110,13 @@ export const TYPERT = {
       parameters: [lessonIdParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/errata#errata/delete:result',
+        typeSymbol: '@dsh-knowledge/errata#errata/delete:result',
         schema: removeResultSchema,
       },
       sourceLocation: { file: 'packages/errata/src/remote.ts', line: 85, column: 3 },
     },
     {
-      id: '@dsh-plugins/errata#errata/promote',
+      id: '@dsh-knowledge/errata#errata/promote',
       service: 'errata',
       namespace: 'errata',
       method: 'promote',
@@ -124,7 +124,7 @@ export const TYPERT = {
       parameters: [lessonIdParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/errata#errata/promote:result',
+        typeSymbol: '@dsh-knowledge/errata#errata/promote:result',
         schema: promoteResultSchema,
       },
       sourceLocation: { file: 'packages/errata/src/remote.ts', line: 97, column: 3 },

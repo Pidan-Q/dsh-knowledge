@@ -16,7 +16,7 @@ import {
   patternKey,
   type EntryStatus,
   type ErrorLesson,
-} from '@dsh-plugins/shared'
+} from '@dsh-knowledge/shared'
 
 /** 无 LLM 提炼时的修复方式占位文案。 */
 export const FIX_PLACEHOLDER = '待人工补充修复方式'

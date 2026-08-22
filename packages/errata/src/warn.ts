@@ -10,7 +10,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { PreToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
-import type { ErrorLesson } from '@dsh-plugins/shared'
+import type { ErrorLesson } from '@dsh-knowledge/shared'
 import { FIX_PLACEHOLDER, type LessonStore } from './lessons.js'
 
 /** 预警注入消息的结构化来源。 */

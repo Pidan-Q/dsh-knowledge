@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
-import type { ErrorLesson } from '@dsh-plugins/shared'
+import type { ErrorLesson } from '@dsh-knowledge/shared'
 import { LessonStore } from '../src/lessons'
 import { ErrataRemoteService, type ErrataPromoteGateway } from '../src/remote'
 

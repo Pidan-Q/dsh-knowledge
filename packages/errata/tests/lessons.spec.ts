@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { ErrorLesson } from '@dsh-plugins/shared'
+import type { ErrorLesson } from '@dsh-knowledge/shared'
 import { LessonStore } from '../src/lessons'
 
 function makeLesson(workspace: string, overrides: Partial<ErrorLesson> = {}): ErrorLesson {

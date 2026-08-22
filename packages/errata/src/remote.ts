@@ -14,7 +14,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type { ErrorLesson } from '@dsh-plugins/shared'
+import type { ErrorLesson } from '@dsh-knowledge/shared'
 import type { LessonStore } from './lessons.js'
 
 /** 晋级链路的宿主侧能力（由 lesson-promote 的 `ctx.lessonPromote` store 提供）。 */

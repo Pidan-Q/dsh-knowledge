@@ -109,7 +109,7 @@ importers:
 
   packages/errata:
     dependencies:
-      '@dsh-plugins/shared':
+      '@dsh-knowledge/shared':
         specifier: file:../shared
         version: link:../shared
       zod:
@@ -143,9 +143,6 @@ importers:
 
   packages/knowledge:
     dependencies:
-      '@dsh-plugins/shared':
-        specifier: file:../shared
-        version: link:../shared
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -171,13 +168,16 @@ importers:
       '@deepseek-ai/dsh-typert-registry':
         specifier: 0.1.0-rc.8
         version: 0.1.0-rc.8(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.8(@deepseek-ai/cordis@4.0.1))
+      '@dsh-knowledge/shared':
+        specifier: file:../shared
+        version: link:../shared
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)
 
   packages/lesson-promote:
     dependencies:
-      '@dsh-plugins/shared':
+      '@dsh-knowledge/shared':
         specifier: file:../shared
         version: link:../shared
     devDependencies:

@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-plugins/client-ui-errata",
+  "name": "@dsh-knowledge/client-ui-errata",
   "version": "0.1.0",
   "description": "错题（errata）Web UI 设置页面板：三态分组 + 归档/反悔/删除/晋级",
   "type": "module",

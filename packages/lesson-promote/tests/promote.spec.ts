@@ -11,7 +11,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ErrorLesson } from '@dsh-plugins/shared'
+import type { ErrorLesson } from '@dsh-knowledge/shared'
 import { draftSkill, readDraftDocument, readDraftRecord } from '../src/promote'
 import { approveDraft, conflictCheckFor, type NameConflictCheck } from '../src/manage'
 import type { LessonPromoteStore } from '../src/index'

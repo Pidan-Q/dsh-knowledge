@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-plugins/shared",
+  "name": "@dsh-knowledge/shared",
   "version": "0.1.0",
   "description": "Shared schema, storage and BM25 search for DSH knowledge/errata plugins",
   "type": "module",

@@ -7,7 +7,7 @@
  * 行挂载）。本入口不注入 agents/tools，可在 host 平面独立挂载：
  *
  *   - id: errata-host
- *     name: '@dsh-plugins/errata/host'
+ *     name: '@dsh-knowledge/errata/host'
  *
  * 晋级链路可选依赖 lesson-promote 的 host 入口（ctx.lessonPromote）；
  * 未启用时 promote 方法返回明确错误，其余能力不受影响。

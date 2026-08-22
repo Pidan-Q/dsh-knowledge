@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { EntryStore, parseEntry, serializeEntry } from '@dsh-plugins/shared'
+import { EntryStore, parseEntry, serializeEntry } from '@dsh-knowledge/shared'
 import { KnowledgeScanner, globToRegExp, isProjectExcluded, toPosix } from '../src/scan'
 
 describe('toPosix（Windows 路径规范化）', () => {

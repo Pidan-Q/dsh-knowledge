@@ -1,7 +1,7 @@
 /**
  * 错题面板共享的 wire 类型与 Remote 调用封装。
  *
- * 客户端包不依赖宿主包（@dsh-plugins/errata）——浏览器 bundle 不能携带
+ * 客户端包不依赖宿主包（@dsh-knowledge/errata）——浏览器 bundle 不能携带
  * 宿主代码；wire 类型在此与宿主 manifest / shared/schema.ts 对齐手写。
  *
  * 调用约定：`ctx.remote.errata.*` 是**位置参数**方法（与官方用法

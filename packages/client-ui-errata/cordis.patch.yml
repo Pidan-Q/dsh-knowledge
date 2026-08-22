@@ -1,3 +1,3 @@
 - insert:
     - id: ui-settings-errata
-      name: '@dsh-plugins/client-ui-errata'
+      name: '@dsh-knowledge/client-ui-errata'

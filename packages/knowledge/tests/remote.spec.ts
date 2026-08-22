@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
-import { EntryStore } from '@dsh-plugins/shared'
+import { EntryStore } from '@dsh-knowledge/shared'
 import { KnowledgeRemoteService, type RememberInput } from '../src/remote'
 
 describe('KnowledgeRemoteService', () => {

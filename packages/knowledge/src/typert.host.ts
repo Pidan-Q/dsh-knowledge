@@ -57,7 +57,7 @@ const workspaceParam = {
   name: 'workspace',
   wire: 'workspace',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/knowledge#workspace', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#workspace', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -66,7 +66,7 @@ const dirParam = {
   name: 'dir',
   wire: 'dir',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/knowledge#dir', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#dir', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -75,7 +75,7 @@ const targetParam = {
   name: 'target',
   wire: 'target',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/knowledge#target', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#target', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -83,14 +83,14 @@ const idParam = {
   name: 'id',
   wire: 'id',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/knowledge#id', schema: z.string() },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#id', schema: z.string() },
 }
 
 const inputParam = {
   name: 'input',
   wire: 'input',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-plugins/knowledge#remember:input', schema: rememberInputSchema },
+  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#remember:input', schema: rememberInputSchema },
 }
 
 const scopeParam = {
@@ -99,18 +99,18 @@ const scopeParam = {
   source: 'json' as const,
   codec: {
     mode: 'strict' as const,
-    typeSymbol: '@dsh-plugins/knowledge#scope',
+    typeSymbol: '@dsh-knowledge/knowledge#scope',
     schema: z.enum(['project', 'global']),
   },
 }
 
 export const TYPERT = {
-  package: '@dsh-plugins/knowledge',
+  package: '@dsh-knowledge/knowledge',
   face: 'host' as const,
   schemas: [],
   invocations: [
     {
-      id: '@dsh-plugins/knowledge#knowledge/list',
+      id: '@dsh-knowledge/knowledge#knowledge/list',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'list',
@@ -118,13 +118,13 @@ export const TYPERT = {
       parameters: [workspaceParam, dirParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/knowledge#knowledge/list:result',
+        typeSymbol: '@dsh-knowledge/knowledge#knowledge/list:result',
         schema: listResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 76, column: 3 },
     },
     {
-      id: '@dsh-plugins/knowledge#knowledge/remember',
+      id: '@dsh-knowledge/knowledge#knowledge/remember',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'remember',
@@ -132,13 +132,13 @@ export const TYPERT = {
       parameters: [inputParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/knowledge#knowledge/remember:result',
+        typeSymbol: '@dsh-knowledge/knowledge#knowledge/remember:result',
         schema: rememberResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 85, column: 3 },
     },
     {
-      id: '@dsh-plugins/knowledge#knowledge/forget',
+      id: '@dsh-knowledge/knowledge#knowledge/forget',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'forget',
@@ -146,13 +146,13 @@ export const TYPERT = {
       parameters: [idParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/knowledge#knowledge/forget:result',
+        typeSymbol: '@dsh-knowledge/knowledge#knowledge/forget:result',
         schema: forgetResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 123, column: 3 },
     },
     {
-      id: '@dsh-plugins/knowledge#knowledge/generate',
+      id: '@dsh-knowledge/knowledge#knowledge/generate',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'generate',
@@ -160,13 +160,13 @@ export const TYPERT = {
       parameters: [scopeParam, workspaceParam, targetParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/knowledge#knowledge/generate:result',
+        typeSymbol: '@dsh-knowledge/knowledge#knowledge/generate:result',
         schema: generateResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 142, column: 3 },
     },
     {
-      id: '@dsh-plugins/knowledge#knowledge/workspaces',
+      id: '@dsh-knowledge/knowledge#knowledge/workspaces',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'workspaces',
@@ -174,7 +174,7 @@ export const TYPERT = {
       parameters: [],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-plugins/knowledge#knowledge/workspaces:result',
+        typeSymbol: '@dsh-knowledge/knowledge#knowledge/workspaces:result',
         schema: workspacesResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 88, column: 3 },

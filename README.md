@@ -1,1 +1,148 @@
-# dsh-knowledge
+# DSH Plugins — 技能管理与知识学习插件
+
+基于 DeepSeek Harness（DSH）Cordis 生态的插件工程，实现"自动捕获错误 → 提炼教训 → 晋升技能 → 执行前主动预警"闭环。
+
+## 插件一览
+
+| 插件包 | 名称 | 职责 |
+|---|---|---|
+| `@dsh-plugins/knowledge` | knowledge | 项目/全局双层知识库：`kb_search` / `kb_remember` / `kb_forget`，agent 创建时注入知识库索引 + 必读条目 |
+| `@dsh-plugins/errata` | errata | 错误捕获与预警：订阅 `tools/result` 沉淀教训（"错题本"），`tools/pre-execute` 命中失败模式时向 agent 注入预警 |
+| `@dsh-plugins/lesson-promote` | lesson-promote | 错题本晋级：把反复失败的教训晋升为技能草稿、审批落盘为正式技能（v3.0 起更名为 lesson-promote，见下） |
+| `@dsh-plugins/shared` | shared | 共享基础设施：条目 Schema（frontmatter + Markdown）、落盘存储、轻量 BM25 检索（无外部依赖） |
+| `@dsh-plugins/client-ui-errata` | client-ui-errata | 浏览器设置页「错题」面板：三态分组 + 归档/反悔/删除/一键晋级 |
+| `@dsh-plugins/client-ui-knowledge` | client-ui-knowledge | 浏览器设置页「知识库」面板：全局/项目双层增删查 + 「获取知识库」一键扫描生成（范围见 `docs/项目知识库扫描范围.md`、`docs/全局知识库扫描范围.md`） |
+
+## Web UI 设置页面板（错题 + 知识库）
+
+宿主端把错题与知识库暴露为 Typert Remote 服务（`ctx.remote.errata.*` / `ctx.remote.knowledge.*`），两个浏览器客户端包向 `settings.section` 注册「错题」「知识库」顶级分区。设计文档见：
+
+- `docs/DSH插件-错题WebUI展示方案.md`（决策定稿：三态映射选视图过滤、能力边界 MVP 分阶段）
+- `docs/DSH插件-错题WebUI-官方仓库集成补丁.md`（四个注册面：host 行 / client 行 / tsconfig.client 聚合 / web-app 依赖）
+- `docs/DSH插件-错题WebUI-交付说明.md`（质量门禁结果与已知问题）
+
+**host / agent 双入口**：Remote 服务是 host 平面服务（Web profile 里 agent 平面按会话挂载），故三包各拆独立 host 入口（`@dsh-plugins/errata/host`、`@dsh-plugins/knowledge/host`、`@dsh-plugins/lesson-promote/host`，包 `exports` 的 `./host`），agent 平面主入口只保留工具逻辑。本地 `cordis.patch.yml` 维持 agent 平面挂载；host 行在迁入官方仓库后按集成补丁加入 web 组合。
+
+## 工作原理
+
+```
+tools/result (isError) ──► errata 记录教训（参数哈希前缀，不落原文）
+                              │ 同类错误 ≥ promoteAfterFailures → distilled
+                              ▼
+tools/pre-execute ──► errata 命中失败模式（warnAfterFailures）──► agent.inject 预警
+                              │
+                              ▼
+lesson-promote list ──► 扫描 distilled 教训 ──► 生成技能草稿（.dsh/lesson-promote/drafts/<name>.md，
+                      │                          含记录字段 + 完整技能文档，批准前可人工编辑）
+                      │ approve（需用户显式调用，先过同名冲突守卫）
+                      ▼
+       写入 .dsh/skills/<name>/SKILL.md（内置 skill-filesystem 项目层 rank 100 自动加载）
+```
+
+**v3.0 机制说明（更名 + 与已装插件解冲突）**：
+
+1. **更名**：原 `skill-manager` 更名为 **`lesson-promote`**（包 `@dsh-plugins/lesson-promote`，插件 id / 工具名 / 服务 `ctx.lessonPromote` 同步更名）。已安装的 `dsh-skills-manager` 插件（skill provider，name=`skill-manager`，rank 50）负责技能的安装/启用/停用/更新/移除等**生命周期管理**；本插件只做**错题本晋级**，两者职责互补、互不占用名字。
+2. **删除重复功能**：v3.0 不再提供版本快照与 `rollback`（技能版本管理归 `dsh-skills-manager`），草稿目录默认改为 `.dsh/lesson-promote/drafts`。
+3. **同名冲突守卫**：`approve` 前查询平台 `ctx.skills` 注册表——若同名技能已由其他来源占用（`dsh-skills-manager` 库 rank 50 / runtime / user / bundled 等），**拒绝批准**并提示，保证已装插件优先、不产生同名遮蔽；仅当同名技能来自内置 `filesystem` provider 的项目层（`<ws>/.dsh/skills`，source=`project-dsh`，即本插件自己的部署层）时才允许幂等重写。
+4. **落盘即加载**：DSH 内置 `skill-filesystem` 默认扫描 `<project>/.dsh/skills`（项目层 rank 100，高于 runtime 层 250）。草稿阶段只写 `.dsh/lesson-promote/drafts/`，绝不写 `.dsh/skills/`；`approve` 落盘 `.dsh/skills/<name>/SKILL.md` 后平台自动发现并加载，**不需要也不应该再调用 `ctx.skills.register()`**。
+
+## 安装
+
+**已发布到 npm（自包含，无外部依赖）**：
+
+```bash
+dsh plugin --profile <name> add @dsh-knowledge/knowledge
+```
+
+> `@dsh-knowledge/knowledge@0.1.0` 已内嵌 shared 存储层（`lib/shared/`），唯一运行依赖是 zod，即安即用。设置面板（client-ui-knowledge）与 errata/lesson-promote 暂未发布，留在本仓库本地安装。
+
+**本地开发安装（源码 link）**：三个插件包各自带 `cordis.patch.yml`（声明 `dsh.bundle.patch`），用 DSH 插件命令逐个安装到 profile。
+
+```bash
+pnpm install                                   # 仅本地开发/测试需要（构建 + 单测）
+dsh plugin --profile <name> add /path/to/plugins/packages/knowledge
+dsh plugin --profile <name> add /path/to/plugins/packages/errata
+dsh plugin --profile <name> add /path/to/plugins/packages/lesson-promote
+```
+
+`dsh plugin` 会自动把声明了 `dsh.bundle.patch` 的包追加进 `dsh.profile.bundles`，无需手改配置。
+
+## 配置
+
+在 profile 的 `cordis.patch.yml` 或 home 层覆盖各插件 `config`：
+
+```yaml
+- id: knowledge
+  config:
+    allowGlobalWrite: false   # 允许写全局层知识库（默认 false）
+    injections:               # agent 创建时主动注入的必读条目（纯文本列表，全文注入）
+    injectKnowledgeIndex: true # 注入知识库索引（条目标题清单）让 AI 读取，默认 true
+    injectKnowledgeMax: 50     # 索引最多列出多少条标题
+      - 项目编码规范：所有接口必须校验 JWT；禁止硬编码密钥。
+- id: errata
+  config:
+    warnAfterFailures: 1      # 失败 ≥1 次即注入预警
+    promoteAfterFailures: 3   # 同类错误 ≥3 次晋升为 distilled 教训
+- id: lesson-promote
+  config:
+    autoApprove: false        # 默认需用户显式 approve
+    promoteAfterFailures: 3
+    draftsDir: .dsh/lesson-promote/drafts   # 草稿清单目录（默认）
+```
+
+## 使用（模型可见工具）
+
+| 工具 | 说明 |
+|---|---|
+| `kb_search` | 检索知识库（query 必填；scope/category/topK 可选） |
+| `kb_remember` | 写入知识条目（global 写入需 `allowGlobalWrite`） |
+| `kb_forget` | 删除条目 |
+| `lesson-promote` | `list` 列出草稿（自动扫描可晋升教训并生成草稿）；`approve <name>` 批准并把草稿落盘为正式技能（含同名冲突守卫，已装插件优先） |
+
+## AI 如何读取知识库
+
+1. **会话注入（主机制）**：每个 agent 创建时自动注入**知识库索引**（条目标题清单 +
+   使用提示），模型会话开始即知知识库内容概览，需要细节时调 `kb_search` 读全文。
+   开关：`injectKnowledgeIndex`（默认 true）、`injectKnowledgeMax`（默认 50 条）。
+2. **工具检索**：`kb_search` 对标题+正文做 BM25 全文检索，按需取详情。
+3. **晋级技能**：`lesson-promote approve` 把教训晋升为 `<workspace>/.dsh/skills/` 技能，
+   内置 skill-filesystem 自动加载为模型可见技能。
+4. **人工**：设置页「知识库」面板浏览/阅读/删除（含「获取知识库」扫描生成）。
+
+## 存储布局
+
+```
+<workspace>/.dsh/knowledge/<id>.md                 # 项目层知识/教训（可进 Git）
+~/.dsh/knowledge/global/<id>.md                    # 全局层知识（$DSH_HOME）
+<workspace>/.dsh/lesson-promote/drafts/<name>.md   # 技能草稿（记录字段 + 完整技能文档，可人工编辑）
+<workspace>/.dsh/skills/<name>/SKILL.md            # 正式技能（仅 approve 写入，内置 skill-filesystem 加载）
+```
+
+## 与已安装插件的关系
+
+- **`dsh-skills-manager`（已安装）**：技能生命周期管理（安装/启用/停用/更新/移除，库在 `~/.dsh/skill-manager/`，provider name=`skill-manager`，rank 50）。本插件**不与其共享任何存储路径**，也不重复其功能；`approve` 的同名冲突守卫保证已装插件的同名技能优先。
+- **`dsh-context`（已安装）**：会话上下文观测/管理（session projections），与本插件的知识注入（`agent/created` 全文注入）机制不同、互不影响。
+
+## 开发
+
+```bash
+pnpm install            # 安装依赖（workspace + 宿主 peer 包）
+pnpm build              # tsc -b 编译全部包到 lib/
+pnpm test               # vitest 单元测试
+pnpm typecheck          # 类型检查
+```
+
+宿主依赖（`@deepseek-ai/cordis`、`dsh-tools`、`dsh-agent`、`dsh-skill`、`dsh-llm`、`dsh-session`）以 **peerDependencies + devDependencies 直接使用 npm 版本**（`cordis@^4.0.1`、`dsh-*@0.1.0-rc.8`），不再依赖本地 DSH 仓库的 `link:` 构建产物，仓库可独立构建与测试。与 DSH 宿主版本兼容性：已验证 **0.1.0-rc.8**。
+
+## 安全设计
+
+- 教训条目只存参数哈希前缀（`argsHashPrefix`），不落参数原文，预警文案不含敏感值。
+- 全局层知识写入默认关闭，需显式 `allowGlobalWrite: true`。
+- 技能批准默认需人工确认（`autoApprove: false`）；草稿批准前不会以任何形式出现在技能目录中；approve 前做同名冲突守卫，绝不覆盖已装插件/其他来源的技能。
+- 所有条目为 UTF-8 Markdown + frontmatter，可进 Git 评审与回滚。
+
+## 已知限制
+
+1. 无 LLM 后台提炼（`fix` 为占位文案，等待人工或后续接入 `ctx.llm` 生成）。
+2. v3.0 起 `approve` 后草稿文档的后续编辑**不会**自动同步到正式技能（已删除版本/回滚机制）；需要人工重新落盘或删除草稿后重新晋升。
+3. `dsh plugin add` 依赖 pnpm 网络与缓存路径，沙箱受限环境可能需要在权限设置中放行 pnpm 缓存目录。

@@ -1,10 +1,10 @@
 - insert:
     - id: lesson-promote
-      name: '@dsh-plugins/lesson-promote'
+      name: '@dsh-knowledge/lesson-promote'
       inject: [skills, agents, tools]
     # host 平面入口：与主入口存在同名服务 lessonPromote 双注册冲突，
     # 主入口已提供该服务，故禁用此入口（errata 晋级链路经 ctx.lessonPromote 复用主入口 store）。
     - id: lesson-promote-host
-      name: '@dsh-plugins/lesson-promote/host'
+      name: '@dsh-knowledge/lesson-promote/host'
       inject: [skills]
       disabled: true

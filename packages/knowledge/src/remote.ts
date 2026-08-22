@@ -17,7 +17,7 @@ import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { EntryStore, entryId, type EntryCategory, type EntryScope, type KnowledgeEntry } from '@dsh-plugins/shared'
+import { EntryStore, entryId, type EntryCategory, type EntryScope, type KnowledgeEntry } from './shared/index.js'
 import { KnowledgeScanner, toPosix, type ScanResult } from './scan.js'
 
 /** Remote wire 命名空间（与 Cordis service key 一致）。 */

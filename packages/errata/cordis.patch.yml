@@ -1,8 +1,8 @@
 - insert:
     - id: errata
-      name: '@dsh-plugins/errata'
+      name: '@dsh-knowledge/errata'
       inject: [agents, tools]
     # host 平面入口：错题设置页 Remote 数据源（手工注册 Typert manifest）。
     - id: errata-host
-      name: '@dsh-plugins/errata/host'
+      name: '@dsh-knowledge/errata/host'
       inject: [typert]

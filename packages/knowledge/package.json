@@ -1,7 +1,7 @@
 {
-  "name": "@dsh-plugins/knowledge",
+  "name": "@dsh-knowledge/knowledge",
   "version": "0.1.0",
-  "description": "Project/global two-layer knowledge base for DeepSeek Harness",
+  "description": "Project/global two-layer knowledge base for DeepSeek Harness (self-contained)",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -27,7 +27,6 @@
     }
   },
   "dependencies": {
-    "@dsh-plugins/shared": "file:../shared",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
@@ -46,7 +45,7 @@
     "@deepseek-ai/dsh-tools": "0.1.0-rc.8",
     "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.8",
     "@deepseek-ai/dsh-typert-registry": "0.1.0-rc.8",
-    "@dsh-plugins/shared": "file:../shared",
+    "@dsh-knowledge/shared": "file:../shared",
     "vitest": "^3.2.4"
   },
   "license": "MIT",

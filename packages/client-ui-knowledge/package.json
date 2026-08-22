@@ -1,5 +1,5 @@
 {
-  "name": "@dsh-plugins/client-ui-knowledge",
+  "name": "@dsh-knowledge/client-ui-knowledge",
   "version": "0.1.0",
   "description": "知识库（knowledge）Web UI 设置页面板：全局/项目双层增删查",
   "type": "module",
