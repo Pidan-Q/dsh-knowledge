@@ -11,12 +11,12 @@ import { EntryStore, parseEntry, serializeEntry } from '../src/shared/index.js'
 import { KnowledgeScanner, globToRegExp, isProjectExcluded, toPosix } from '../src/scan'
 
 describe('toPosix（Windows 路径规范化）', () => {
-  it('反斜杠统一转正斜杠', () => {
+  it('反斜杠统一转正斜杠', async () => {
     expect(toPosix('C:\\Users\\demo\\proj')).toBe('C:/Users/demo/proj')
     expect(toPosix('C:/Users/demo/proj')).toBe('C:/Users/demo/proj')
   })
 
-  it('正斜杠路径 YAML 序列化往返无损（幂等键稳定的前提）', () => {
+  it('正斜杠路径 YAML 序列化往返无损（幂等键稳定的前提）', async () => {
     const entry = {
       id: 'kb-20260822-001', scope: 'project' as const, workspace: 'C:/Users/demo/proj',
       category: 'fact' as const, tags: ['architecture', 'scanned'], title: 'docs/a.md', body: 'x',
@@ -31,7 +31,7 @@ describe('toPosix（Windows 路径规范化）', () => {
 })
 
 describe('globToRegExp', () => {
-  it('* 匹配单段、** 匹配跨段、**/ 匹配零目录', () => {
+  it('* 匹配单段、** 匹配跨段、**/ 匹配零目录', async () => {
     expect(globToRegExp('docs/architecture*.md').test('docs/architecture.md')).toBe(true)
     expect(globToRegExp('docs/architecture*.md').test('docs/architecture-2026.md')).toBe(true)
     expect(globToRegExp('docs/architecture*.md').test('docs/architecture/a.md')).toBe(false)
@@ -44,7 +44,7 @@ describe('globToRegExp', () => {
 })
 
 describe('isProjectExcluded', () => {
-  it('排除 .git/node_modules/.dsh/.env/锁文件', () => {
+  it('排除 .git/node_modules/.dsh/.env/锁文件', async () => {
     expect(isProjectExcluded('.git/config')).toBe(true)
     expect(isProjectExcluded('node_modules/x/index.js')).toBe(true)
     expect(isProjectExcluded('proj/.dsh/knowledge/kb.md')).toBe(true)
@@ -86,8 +86,8 @@ describe('KnowledgeScanner.scanProject', () => {
     rmSync(workspace, { recursive: true, force: true })
   })
 
-  it('按分类表生成条目：语义分类映射到合法 category、原样进 tags', () => {
-    const result = scanner.scanProject(workspace)
+  it('按分类表生成条目：语义分类映射到合法 category、原样进 tags', async () => {
+    const result = await scanner.scanProject(workspace)
     expect(result.entries.length).toBe(4)
     const byTitle = new Map(result.entries.map((e) => [e.title, e]))
     // 语义分类：architecture/deployment；条目 category 映射为 fact/decision
@@ -114,17 +114,17 @@ describe('KnowledgeScanner.scanProject', () => {
     expect([...byTitle.keys()].some((t) => t.includes('.env'))).toBe(false)
   })
 
-  it('幂等：重复扫描不产生重复条目', () => {
-    const first = scanner.scanProject(workspace)
-    const second = scanner.scanProject(workspace)
+  it('幂等：重复扫描不产生重复条目', async () => {
+    const first = await scanner.scanProject(workspace)
+    const second = await scanner.scanProject(workspace)
     expect(first.generated).toBeGreaterThan(0)
     expect(second.generated).toBe(0)
     expect(second.skipped).toBe(first.generated)
     expect(store.list(workspace).length).toBe(first.generated)
   })
 
-  it('V1.5 分类子目录落盘：条目在 <分类>/ 子目录，递归 list 可见且幂等', () => {
-    const first = scanner.scanProject(workspace)
+  it('V1.5 分类子目录落盘：条目在 <分类>/ 子目录，递归 list 可见且幂等', async () => {
+    const first = await scanner.scanProject(workspace)
     expect(first.generated).toBe(4)
     // 每个条目落在 <ws>/.dsh/knowledge/<语义分类>/<id>.md
     for (const entry of first.entries) {
@@ -154,15 +154,15 @@ describe('KnowledgeScanner.scanProject', () => {
     ].join('\n'))
     expect(store.list(workspace).length).toBe(5)
     // 幂等：再扫描仍不重复（旧条目无 source，不影响新条目幂等）
-    const again = scanner.scanProject(workspace)
+    const again = await scanner.scanProject(workspace)
     expect(again.generated).toBe(0)
   })
 
-  it('V1.5 容量上限：超限停止，高优先级分类先处理', () => {
+  it('V1.5 容量上限：超限停止，高优先级分类先处理', async () => {
     // 大文件撑爆小预算：只允许 ~120 字符
     writeFileSync(join(workspace, 'docs', 'architecture.md'), '# 架构\n\n' + 'x'.repeat(300))
     writeFileSync(join(workspace, 'package.json'), JSON.stringify({ name: 'big', scripts: { a: '1' }, dependencies: { b: '2' } }))
-    const result = scanner.scanProject(workspace, undefined, undefined, 150)
+    const result = await scanner.scanProject(workspace, undefined, undefined, 150)
     // 预算只够处理最前面的文件（architecture 优先级最高，README 先于其他）
     expect(result.entries.length).toBeGreaterThan(0)
     expect(result.entries.length).toBeLessThan(4)
@@ -170,8 +170,8 @@ describe('KnowledgeScanner.scanProject', () => {
     expect(result.entries[0]!.tags[0]).toBe('architecture')
   })
 
-  it('V1.5 分类过滤：只扫描指定分类', () => {
-    const result = scanner.scanProject(workspace, undefined, ['deployment'])
+  it('V1.5 分类过滤：只扫描指定分类', async () => {
+    const result = await scanner.scanProject(workspace, undefined, ['deployment'])
     expect(result.entries.length).toBe(1)
     expect(result.entries[0]!.tags[0]).toBe('deployment')
   })
@@ -198,8 +198,8 @@ describe('KnowledgeScanner.scanGlobal', () => {
     rmSync(dshHome, { recursive: true, force: true })
   })
 
-  it('扫描 settings.yaml 与 profiles 插件清单，跳过缺失源', () => {
-    const result = scanner.scanGlobal()
+  it('扫描 settings.yaml 与 profiles 插件清单，跳过缺失源', async () => {
+    const result = await scanner.scanGlobal()
     const byTitle = new Map(result.entries.map((e) => [e.title, e]))
     expect(byTitle.has('~/.dsh/settings.yaml') || [...byTitle.keys()].some((t) => t.endsWith('settings.yaml'))).toBe(true)
     const pkg = [...byTitle.entries()].find(([t]) => t.endsWith('profiles/web/package.json'))
@@ -214,25 +214,115 @@ describe('KnowledgeScanner.scanGlobal', () => {
     }
   })
 
-  it('幂等：重复扫描跳过已生成条目', () => {
-    const first = scanner.scanGlobal()
-    const second = scanner.scanGlobal()
+  it('幂等：重复扫描跳过已生成条目', async () => {
+    const first = await scanner.scanGlobal()
+    const second = await scanner.scanGlobal()
     expect(second.generated).toBe(0)
     expect(second.skipped).toBe(first.generated + first.skipped)
   })
 
-  it('健壮性：全源缺失（模拟 Windows 无 Linux 专属源）时不抛错、优雅跳过', () => {
+  it('健壮性：全源缺失/部分缺失时不抛错、优雅跳过', async () => {
     const emptyHome = mkdtempSync(join(tmpdir(), 'kb-empty-'))
     try {
       const emptyStore = new EntryStore({ dshHome: emptyHome })
       const emptyScanner = new KnowledgeScanner(emptyStore, emptyHome)
-      // 空 DSH home：settings.yaml / profiles 均不存在；os-release/bashrc 由平台守卫跳过或缺失跳过
-      expect(() => emptyScanner.scanGlobal()).not.toThrow()
-      const result = emptyScanner.scanGlobal()
-      expect(result.generated).toBe(0)
-      expect(result.entries).toEqual([])
+      // 空 DSH home：settings.yaml / profiles 均不存在；os-release/bashrc 按平台
+      // 存在与否决定——缺失源一律静默跳过，绝不抛错（scanned 随环境变化，只验一致性）
+      const result = await emptyScanner.scanGlobal()
+      expect(result.generated).toBe(result.entries.length)
+      for (const entry of result.entries) expect(entry.scope).toBe('global')
+      // 不存在的 dshHome（目录级缺失）同样不抛错
+      const missingStore = new EntryStore({ dshHome: join(emptyHome, 'nested', 'no-such-dir') })
+      const missingScanner = new KnowledgeScanner(missingStore, join(emptyHome, 'nested', 'no-such-dir'))
+      await expect(missingScanner.scanGlobal()).resolves.toBeDefined()
+      // 项目层扫描指向不存在的 workspace 也不抛错
+      await expect(missingScanner.scanProject(join(emptyHome, 'no-ws'))).resolves.toBeDefined()
     } finally {
       rmSync(emptyHome, { recursive: true, force: true })
     }
+  })
+})
+
+describe('KnowledgeScanner LLM 模式（V2）', () => {
+  let dshHome: string
+  let workspace: string
+  let store: EntryStore
+  let scanner: KnowledgeScanner
+
+  beforeEach(() => {
+    dshHome = mkdtempSync(join(tmpdir(), 'kb-llm-home-'))
+    workspace = mkdtempSync(join(tmpdir(), 'kb-llm-ws-'))
+    mkdirSync(join(workspace, 'docs'), { recursive: true })
+    writeFileSync(join(workspace, 'README.md'), '# 项目\n\n使用 pnpm monorepo。')
+    store = new EntryStore({ dshHome })
+    scanner = new KnowledgeScanner(store, dshHome)
+  })
+
+  afterEach(() => {
+    rmSync(dshHome, { recursive: true, force: true })
+    rmSync(workspace, { recursive: true, force: true })
+  })
+
+  it('LLM 模式生成 proposed 事实条目（分类子目录落盘、source 可溯）', async () => {
+    const fakeLlm = async () => JSON.stringify({
+      entries: [
+        { title: '包管理', facts: ['使用 pnpm', 'monorepo 结构'], tags: ['tooling'] },
+      ],
+    })
+    const result = await scanner.scanProject(workspace, undefined, undefined, undefined, fakeLlm)
+    expect(result.entries.length).toBe(1)
+    const entry = result.entries[0]!
+    expect(entry.title).toBe('包管理')
+    expect(entry.review).toBe('proposed')
+    expect(entry.body).toContain('- 使用 pnpm')
+    expect(entry.tags).toContain('architecture') // 语义分类进 tags 首位
+    expect(entry.tags).toContain('tooling')
+    expect(entry.source).toContain('README.md')
+    expect(existsSync(join(workspace, '.dsh', 'knowledge', 'architecture', `${entry.id}.md`))).toBe(true)
+  })
+
+  it('LLM 模式幂等：同 title 合并 facts，不重复生成', async () => {
+    const fakeLlm = async () => JSON.stringify({
+      entries: [{ title: '包管理', facts: ['使用 pnpm'], tags: ['tooling'] }],
+    })
+    const first = await scanner.scanProject(workspace, undefined, undefined, undefined, fakeLlm)
+    expect(first.generated).toBe(1)
+
+    const fakeLlm2 = async () => JSON.stringify({
+      entries: [{ title: '包管理', facts: ['使用 pnpm', 'monorepo 结构'], tags: ['tooling'] }],
+    })
+    const second = await scanner.scanProject(workspace, undefined, undefined, undefined, fakeLlm2)
+    // 合并而非新建：generated 仍计 1（更新），库内只有 1 条
+    expect(second.generated).toBe(1)
+    expect(store.list(workspace).length).toBe(1)
+    const merged = store.list(workspace)[0]!
+    expect(merged.body).toContain('- 使用 pnpm')
+    expect(merged.body).toContain('- monorepo 结构')
+    expect(merged.review).toBe('proposed')
+  })
+
+  it('LLM 模式合并不覆盖 confirmed 状态', async () => {
+    const fakeLlm = async () => JSON.stringify({
+      entries: [{ title: '包管理', facts: ['使用 pnpm'], tags: ['tooling'] }],
+    })
+    await scanner.scanProject(workspace, undefined, undefined, undefined, fakeLlm)
+    // 确认后再次扫描：合并保留 confirmed
+    const entry = store.list(workspace)[0]!
+    expect(store.updateReview(entry.id, 'confirmed', workspace)).toBe(true)
+    const fakeLlm2 = async () => JSON.stringify({
+      entries: [{ title: '包管理', facts: ['使用 pnpm', '新事实'], tags: ['tooling'] }],
+    })
+    await scanner.scanProject(workspace, undefined, undefined, undefined, fakeLlm2)
+    const after = store.list(workspace)[0]!
+    expect(after.review).toBe('confirmed')
+    expect(after.body).toContain('- 新事实')
+  })
+
+  it('LLM 调用失败静默跳过（批次容错），不影响其他文件', async () => {
+    const fakeLlm = async () => { throw new Error('LLM 超时') }
+    const result = await scanner.scanProject(workspace, undefined, undefined, undefined, fakeLlm)
+    expect(result.generated).toBe(0)
+    expect(result.scanned).toBe(1)
+    expect(store.list(workspace).length).toBe(0)
   })
 })

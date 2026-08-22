@@ -79,8 +79,8 @@ describe('KnowledgeRemoteService', () => {
   })
 
   it('generate 项目层必须携带 workspace', async () => {
-    expect(() => service.generate('project')).toThrow('workspace')
-    expect(() => service.generate('nope' as never)).toThrow('未知范围')
+    await expect(service.generate('project')).rejects.toThrow('workspace')
+    await expect(service.generate('nope' as never)).rejects.toThrow('未知范围')
   })
 
   it('generate 项目层按扫描范围生成 md 条目且幂等', async () => {
@@ -217,5 +217,48 @@ describe('KnowledgeRemoteService', () => {
       rmSync(base, { recursive: true, force: true })
       rmSync(opened, { recursive: true, force: true })
     }
+  })
+})
+
+describe('KnowledgeRemoteService V2（confirm / llm 模式）', () => {
+  let dshHome: string
+  let workspace: string
+  let ctx: Context
+  let service: KnowledgeRemoteService
+
+  beforeEach(() => {
+    dshHome = mkdtempSync(join(tmpdir(), 'kb-v2-home-'))
+    workspace = mkdtempSync(join(tmpdir(), 'kb-v2-ws-'))
+    ctx = new Context()
+    service = new KnowledgeRemoteService(ctx, { store: new EntryStore({ dshHome }), allowGlobalWrite: true })
+  })
+
+  afterEach(() => {
+    rmSync(dshHome, { recursive: true, force: true })
+    rmSync(workspace, { recursive: true, force: true })
+  })
+
+  it('generate llm 模式使用注入的 llmCall 生成 proposed 条目', async () => {
+    const { mkdirSync, writeFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    mkdirSync(join(workspace, 'docs'), { recursive: true })
+    writeFileSync(join(workspace, 'README.md'), '# Demo\n\n说明。')
+    const ctx2 = new Context()
+    const svc = new KnowledgeRemoteService(ctx2, {
+      store: new EntryStore({ dshHome }),
+      llmCall: async () => JSON.stringify({ entries: [{ title: '提取事实', facts: ['A', 'B'], tags: ['x'] }] }),
+    })
+    const result = await svc.generate('project', workspace, undefined, 'llm')
+    expect(result.generated).toBe(1)
+    const entry = result.entries[0]!
+    expect(entry.review).toBe('proposed')
+    expect(entry.title).toBe('提取事实')
+    // confirm 生效
+    const conf = await svc.confirm(entry.id, workspace)
+    expect(conf.confirmed).toBe(true)
+    const listed = await svc.list(workspace)
+    expect(listed.entries.find((e) => e.id === entry.id)?.review).toBe('confirmed')
+    // 再次 confirm（不存在）返回 false
+    expect((await svc.confirm('kb-99999999-999', workspace)).confirmed).toBe(false)
   })
 })

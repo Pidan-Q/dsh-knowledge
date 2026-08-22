@@ -34,6 +34,8 @@ export interface KnowledgeEntryView {
   fix?: string
   relatedSkillId?: string
   archivedFrom?: 'raw' | 'distilled' | 'promoted' | 'archived'
+  /** V2 审核状态（LLM 提取条目为 proposed，确认后 confirmed）。 */
+  review?: 'proposed' | 'confirmed'
 }
 
 /** remember 的 wire 输入。 */
@@ -61,7 +63,13 @@ export interface KnowledgeRemoteApi {
   workspaces(): Promise<RemoteResult<{ workspaces: string[] }>>
   remember(input: RememberInputView, workspace?: string): Promise<RemoteResult<{ id: string }>>
   forget(id: string, workspace?: string): Promise<RemoteResult<{ removed: boolean }>>
-  generate(scope: 'project' | 'global', workspace?: string, target?: string): Promise<RemoteResult<GenerateResultView>>
+  generate(
+    scope: 'project' | 'global',
+    workspace?: string,
+    target?: string,
+    mode?: 'summary' | 'llm',
+  ): Promise<RemoteResult<GenerateResultView>>
+  confirm(id: string, workspace?: string): Promise<RemoteResult<{ confirmed: boolean }>>
 }
 
 /** 取 `ctx.remote` 上的 knowledge 命名空间（mount 后可用）。

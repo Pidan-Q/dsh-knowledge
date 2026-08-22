@@ -23,6 +23,8 @@ export interface KnowledgeEntry {
   confidence: number
   source?: string
   status: EntryStatus
+  /** V2：人工审核状态（LLM 提取条目 proposed，经面板确认后 confirmed）。 */
+  review?: 'proposed' | 'confirmed'
 }
 
 export interface ErrorLesson extends KnowledgeEntry {
@@ -60,6 +62,7 @@ export interface EntryFrontmatter {
   fix?: unknown
   related_skill_id?: unknown
   archived_from?: unknown
+  review?: unknown
 }
 
 const SCOPES: readonly string[] = ['project', 'global', 'session']
@@ -103,6 +106,7 @@ export function serializeEntry(entry: KnowledgeEntry): string {
   if (entry.tags.length > 0) fm.tags = entry.tags
   if (entry.title !== entry.id) fm.title = entry.title
   if (entry.source !== undefined) fm.source = entry.source
+  if (entry.review !== undefined) fm.review = entry.review
   if (isErrorLesson(entry)) {
     fm.tool = entry.tool
     fm.args_hash_prefix = entry.argsHashPrefix
@@ -168,6 +172,7 @@ export function parseEntry(text: string): KnowledgeEntry | undefined {
   }
   if (typeof fm.workspace === 'string' && fm.workspace.length > 0) base.workspace = fm.workspace
   if (typeof fm.source === 'string' && fm.source.length > 0) base.source = fm.source
+  if (fm.review === 'proposed' || fm.review === 'confirmed') base.review = fm.review
   if (category === 'lesson') {
     const tool = str(fm.tool, '')
     const errorType = str(fm.error_type, '')

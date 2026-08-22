@@ -105,9 +105,9 @@ dsh plugin --profile <name> add /path/to/plugins/packages/lesson-promote
 
 | 工具 | 说明 |
 |---|---|
-| `kb_search` | 检索知识库（query 必填；scope/category/topK 可选） |
-| `kb_generate` | 按扫描范围生成知识条目（scope 必填；project 需 workspace；categories 可选；总容量上限 50 万字符、分类子目录落盘） |
-| `kb_list` | 列出知识库条目（scope/category/limit 可选） |
+| `kb_search` | 检索知识库（query 必填；scope/category/topK/review 可选） |
+| `kb_generate` | 按扫描范围生成知识条目（scope 必填；project 需 workspace；categories/mode 可选；summary 整文件摘要或 llm 事实提取；总容量上限 50 万字符、分类子目录落盘） |
+| `kb_list` | 列出知识库条目（scope/category/limit/review 可选） |
 | `kb_remember` | 写入知识条目（global 写入需 `allowGlobalWrite`） |
 | `kb_forget` | 删除条目 |
 | `lesson-promote` | `list` 列出草稿（自动扫描可晋升教训并生成草稿）；`approve <name>` 批准并把草稿落盘为正式技能（含同名冲突守卫，已装插件优先） |

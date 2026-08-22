@@ -77,6 +77,18 @@ const dirParam = {
   acceptsUndefined: true as const,
 }
 
+const modeParam = {
+  name: 'mode',
+  wire: 'mode',
+  source: 'json' as const,
+  codec: {
+    mode: 'strict' as const,
+    typeSymbol: 'dsh-kb#mode',
+    schema: z.enum(['summary', 'llm']).optional(),
+  },
+  acceptsUndefined: true as const,
+}
+
 const targetParam = {
   name: 'target',
   wire: 'target',
@@ -150,13 +162,27 @@ export const TYPERT_REMOTE = {
       namespace: 'knowledge',
       method: 'generate',
       invocation: { kind: 'direct' as const },
-      parameters: [scopeParam, workspaceParam, targetParam],
+      parameters: [scopeParam, workspaceParam, targetParam, modeParam],
       result: {
         mode: 'strict' as const,
         typeSymbol: 'dsh-kb#knowledge/generate:result',
         schema: generateResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 142, column: 3 },
+    },
+    {
+      id: 'dsh-kb#knowledge/confirm',
+      service: 'knowledge',
+      namespace: 'knowledge',
+      method: 'confirm',
+      invocation: { kind: 'direct' as const },
+      parameters: [idParam, workspaceParam],
+      result: {
+        mode: 'strict' as const,
+        typeSymbol: 'dsh-kb#knowledge/confirm:result',
+        schema: z.object({ confirmed: z.boolean() }),
+      },
+      sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 230, column: 3 },
     },
     {
       id: 'dsh-kb#knowledge/workspaces',

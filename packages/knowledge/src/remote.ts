@@ -19,6 +19,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { EntryStore, entryId, type EntryCategory, type EntryScope, type KnowledgeEntry } from './shared/index.js'
 import { KnowledgeScanner, toPosix, type ScanResult } from './scan.js'
+import { buildLlmCallFromContext, type LlmTextCall } from './extractor.js'
 
 /** Remote wire 命名空间（与 Cordis service key 一致）。 */
 export const KNOWLEDGE_NAMESPACE = 'knowledge'
@@ -49,6 +50,8 @@ export interface KnowledgeRemoteServiceOptions {
   projectScanRoot?: string | string[]
   /** dsh 已打开/注册的工作区路径（来自 workspaceRegistry），恒出现在候选列表。 */
   workspaces?: readonly string[]
+  /** LLM 提取调用（测试注入用）；缺省从 ctx.llm + agentDefaultModel 构建。 */
+  llmCall?: LlmTextCall
 }
 
 const CATEGORIES: readonly EntryCategory[] = ['convention', 'fact', 'decision', 'pitfall', 'lesson']
@@ -78,6 +81,7 @@ export class KnowledgeRemoteService extends TypertRemoteService {
   private readonly allowGlobalWrite: boolean
   private readonly projectScanRoots: string[]
   private readonly registeredWorkspaces: string[]
+  private readonly llmCall: LlmTextCall | undefined
 
   constructor(ctx: Context, options: KnowledgeRemoteServiceOptions = {}) {
     super(ctx, KNOWLEDGE_NAMESPACE)
@@ -91,6 +95,7 @@ export class KnowledgeRemoteService extends TypertRemoteService {
         : [options.projectScanRoot]
     this.projectScanRoots = [...new Set(configured.map((root) => toPosix(root)))]
     this.registeredWorkspaces = (options.workspaces ?? []).map((ws) => toPosix(ws))
+    this.llmCall = options.llmCall
   }
 
   /**
@@ -213,18 +218,37 @@ export class KnowledgeRemoteService extends TypertRemoteService {
    * - 幂等：以 source + scope 为键，重复扫描只跳过不重复写。
    */
   @Remote('generate')
-  generate(scope: 'project' | 'global', workspace?: string, target?: string): ScanResult {
+  async generate(
+    scope: 'project' | 'global',
+    workspace?: string,
+    target?: string,
+    mode?: 'summary' | 'llm',
+  ): Promise<ScanResult> {
     if (scope !== 'project' && scope !== 'global') {
       throw new Error(`generate: 未知范围 ${String(scope)}`)
     }
     const scanner = new KnowledgeScanner(this.store, this.store.dshHome)
     const targetDir = target !== undefined && target.length > 0 ? target : undefined
+    // V2 LLM 模式：优先注入的 llmCall，其次从 ctx 构建；都拿不到则报错
+    let llm: LlmTextCall | undefined
+    if (mode === 'llm') {
+      llm = this.llmCall ?? buildLlmCallFromContext(this.ctx)
+      if (llm === undefined) {
+        throw new Error('generate: LLM 服务不可用（llm 或默认模型未配置），请改用 summary 模式')
+      }
+    }
     if (scope === 'project') {
       if (workspace === undefined || workspace.length === 0) {
         throw new Error('generate: 项目层扫描必须携带 workspace')
       }
-      return scanner.scanProject(workspace, targetDir)
+      return await scanner.scanProject(workspace, targetDir, undefined, undefined, llm)
     }
-    return scanner.scanGlobal(targetDir)
+    return await scanner.scanGlobal(targetDir, undefined, undefined, llm)
+  }
+
+  /** 确认知识条目（proposed → confirmed）：返回是否找到并更新。 */
+  @Remote('confirm')
+  confirm(id: string, workspace?: string): { confirmed: boolean } {
+    return { confirmed: this.store.updateReview(id, 'confirmed', workspace) }
   }
 }

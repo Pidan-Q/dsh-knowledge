@@ -7,10 +7,11 @@
  * 或删除既有条目）。排除规则、分类表、提取规则见两份规格文档。
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { homedir } from 'node:os'
-import { EntryStore, type EntryCategory, type KnowledgeEntry } from './shared/index.js'
+import { EntryStore, serializeEntry, type EntryCategory, type KnowledgeEntry } from './shared/index.js'
+import { buildExtractMessages, parseExtractJson, type ExtractedFact, type LlmTextCall } from './extractor.js'
 
 /**
  * 把路径规范化为正斜杠分隔（Windows 兼容关键）。
@@ -133,6 +134,53 @@ function extnameOf(name: string): string {
 /** 判断文本是否为可读 UTF-8（含 NUL 即视为二进制）。 */
 export function looksBinary(buf: Buffer): boolean {
   return buf.includes(0)
+}
+
+/** 合并事实条目正文：保留非 bullet 行（标题等），bullet 行按内容去重合并。 */
+export function mergeFactBodies(existing: string, newFacts: readonly string[]): string {
+  const seen = new Set<string>()
+  const lines: string[] = []
+  for (const line of existing.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('- ')) {
+      if (seen.has(trimmed)) continue
+      seen.add(trimmed)
+      lines.push(line)
+    } else {
+      lines.push(line)
+    }
+  }
+  for (const fact of newFacts) {
+    const line = `- ${fact.trim()}`
+    if (seen.has(line)) continue
+    seen.add(line)
+    lines.push(line)
+  }
+  return lines.join('\n')
+}
+
+/** 构造事实条目 body（标题 + bullet 列表，与《知识库思路.md》格式一致）。 */
+export function factEntryBody(title: string, facts: readonly string[]): string {
+  return `## ${title}\n\n${facts.map((fact) => `- ${fact}`).join('\n')}`
+}
+
+/**
+ * 调用 LLM 提取一批事实（失败静默返回空数组，不影响其他文件；
+ * 批次级别容错见《知识库思路.md》错误处理）。
+ */
+export async function extractFactEntries(
+  llm: LlmTextCall,
+  semantic: string,
+  scope: 'project' | 'global',
+  text: string,
+): Promise<ExtractedFact[]> {
+  try {
+    const messages = buildExtractMessages(semantic, scope, text)
+    const raw = await llm(messages, 1500)
+    return parseExtractJson(raw)
+  } catch {
+    return []
+  }
 }
 
 /** 生成形如 kb-YYYYMMDD-NNN 的条目 id（当日已有序号递增）。 */
@@ -313,12 +361,13 @@ export class KnowledgeScanner {
    * @param categories - 只扫描指定语义分类；缺省全部分类。
    * 容量：累计消耗字符数达 MAX_TOTAL_SCAN_CHARS 后停止（按分类优先级 + 文件名序，
    * 高优先级分类先处理）。 */
-  scanProject(
+  async scanProject(
     workspace: string,
     targetDir?: string,
     categories?: readonly ScanCategory[],
     maxTotalChars: number = MAX_TOTAL_SCAN_CHARS,
-  ): ScanResult {
+    llm?: LlmTextCall,
+  ): Promise<ScanResult> {
     const result: ScanResult = { scanned: 0, generated: 0, skipped: 0, entries: [] }
     const today = new Date().toISOString().slice(0, 10)
     // 自定义落盘时按该目录读既有条目做幂等与序号（默认仍走层目录，递归含子目录）
@@ -374,6 +423,60 @@ export class KnowledgeScanner {
       }
       result.scanned += 1
       const text = buf.toString('utf8')
+      // V2 LLM 模式：每文件送 LLM 提取结构化事实（title 合并、proposed 待确认）
+      if (llm !== undefined) {
+        consumed += text.length
+        if (consumed > maxTotalChars) break
+        const facts = await extractFactEntries(llm, semantic, 'project', text)
+        for (const fact of facts) {
+          const match = existing.find((e) => e.scope === 'project' && e.title === fact.title)
+          if (match !== undefined) {
+            const file = this.store.locate(match.id, workspace)
+            if (file === undefined) {
+              result.skipped += 1
+              continue
+            }
+            const merged: KnowledgeEntry = {
+              ...match,
+              body: mergeFactBodies(match.body, fact.facts),
+              lastUsed: today,
+              review: match.review === 'confirmed' ? 'confirmed' : 'proposed',
+            }
+            writeFileSync(file, serializeEntry(merged), 'utf8')
+            result.generated += 1
+            continue
+          }
+          const factKey = `llm::project::${fact.title}`
+          if (seen.has(factKey)) {
+            result.skipped += 1
+            continue
+          }
+          seen.add(factKey)
+          const sub = toPosix(semantic)
+          const entry: KnowledgeEntry = {
+            id: nextScanId(ids),
+            scope: 'project',
+            workspace: workspacePosix,
+            category: CATEGORY_MAP[semantic],
+            tags: [semantic, ...fact.tags],
+            title: fact.title,
+            body: factEntryBody(fact.title, fact.facts),
+            created: today,
+            lastUsed: today,
+            hitCount: 0,
+            confidence: 0.7,
+            source: fullPosix,
+            status: 'raw',
+            review: 'proposed',
+          }
+          ids.push(entry)
+          if (targetDir === undefined) this.store.writeTo(entry, join(join(workspace, '.dsh', 'knowledge'), sub))
+          else this.store.writeTo(entry, join(toPosix(targetDir), sub))
+          result.generated += 1
+          result.entries.push(entry)
+        }
+        continue
+      }
       const body = extractFor(basename(file), text)
       if (body.trim().length === 0) {
         result.skipped += 1
@@ -417,11 +520,12 @@ export class KnowledgeScanner {
   /** 全局层扫描：DSH home 配置 + 少量只读系统信息源。
    * @param targetDir - 用户自定义落盘目录；缺省写入 <dshHome>/knowledge/<分类>/。
    * @param categories - 只扫描指定语义分类；缺省全部分类。 */
-  scanGlobal(
+  async scanGlobal(
     targetDir?: string,
     categories?: readonly ScanCategory[],
     maxTotalChars: number = MAX_TOTAL_SCAN_CHARS,
-  ): ScanResult {
+    llm?: LlmTextCall,
+  ): Promise<ScanResult> {
     const result: ScanResult = { scanned: 0, generated: 0, skipped: 0, entries: [] }
     const today = new Date().toISOString().slice(0, 10)
     const existing = targetDir === undefined ? this.store.list() : this.store.listDir(targetDir)
@@ -490,7 +594,62 @@ export class KnowledgeScanner {
         continue
       }
       result.scanned += 1
-      const body = source.extract(buf.toString('utf8'))
+      const text = buf.toString('utf8')
+      // V2 LLM 模式：全局源同样走事实提取
+      if (llm !== undefined) {
+        consumed += text.length
+        if (consumed > maxTotalChars) break
+        const pathPosix = toPosix(source.path)
+        const facts = await extractFactEntries(llm, source.category, 'global', text)
+        for (const fact of facts) {
+          const match = existing.find((e) => e.scope === 'global' && e.title === fact.title)
+          if (match !== undefined) {
+            const file = this.store.locate(match.id)
+            if (file === undefined) {
+              result.skipped += 1
+              continue
+            }
+            const merged: KnowledgeEntry = {
+              ...match,
+              body: mergeFactBodies(match.body, fact.facts),
+              lastUsed: today,
+              review: match.review === 'confirmed' ? 'confirmed' : 'proposed',
+            }
+            writeFileSync(file, serializeEntry(merged), 'utf8')
+            result.generated += 1
+            continue
+          }
+          const factKey = `llm::global::${fact.title}`
+          if (seen.has(factKey)) {
+            result.skipped += 1
+            continue
+          }
+          seen.add(factKey)
+          const sub = toPosix(source.category)
+          const entry: KnowledgeEntry = {
+            id: nextScanId(ids),
+            scope: 'global',
+            category: CATEGORY_MAP[source.category],
+            tags: [source.category, ...fact.tags],
+            title: fact.title,
+            body: factEntryBody(fact.title, fact.facts),
+            created: today,
+            lastUsed: today,
+            hitCount: 0,
+            confidence: 0.7,
+            source: pathPosix,
+            status: 'raw',
+            review: 'proposed',
+          }
+          ids.push(entry)
+          if (targetDir === undefined) this.store.writeTo(entry, join(join(this.dshHome, 'knowledge'), sub))
+          else this.store.writeTo(entry, join(toPosix(targetDir), sub))
+          result.generated += 1
+          result.entries.push(entry)
+        }
+        continue
+      }
+      const body = source.extract(text)
       if (body.trim().length === 0) {
         result.skipped += 1
         continue

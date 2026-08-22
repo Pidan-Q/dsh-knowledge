@@ -16,6 +16,7 @@ import {
   type KnowledgeEntry,
 } from './shared/index.js'
 import { KnowledgeScanner, type ScanCategory, type ScanResult } from './scan.js'
+import type { LlmTextCall } from './extractor.js'
 
 /** KnowledgeService 构造选项。 */
 export interface KnowledgeServiceOptions {
@@ -35,6 +36,8 @@ export interface SearchOptions {
   category?: EntryCategory
   /** 返回的最大命中数；默认 5。 */
   topK?: number
+  /** V2 审核状态过滤；缺省不限定。 */
+  review?: 'proposed' | 'confirmed'
 }
 
 /** 一条检索命中。 */
@@ -92,12 +95,14 @@ export class KnowledgeService {
    * @param options - 范围/分类过滤与返回数量。
    */
   search(query: string, options: SearchOptions = {}): SearchHit[] {
-    const { scope, category, topK = 5 } = options
+    const { scope, category, topK = 5, review } = options
     const hits = this.index.search(query, {
       topK,
       filter: (entry) => {
         if (scope !== undefined && entry.scope !== scope) return false
         if (category !== undefined && entry.category !== category) return false
+        if (review === 'proposed' && entry.review !== 'proposed') return false
+        if (review === 'confirmed' && entry.review !== 'confirmed') return false
         return true
       },
     })
@@ -159,12 +164,14 @@ export class KnowledgeService {
    * @param targetDir - 自定义落盘目录（缺省按层默认 + 分类子目录）。
    * @param categories - 只扫描指定语义分类（缺省全部）。
    */
-  generate(
+  async generate(
     scope: 'project' | 'global',
     workspace?: string,
     targetDir?: string,
     categories?: readonly string[],
-  ): ScanResult {
+    maxTotalChars?: number,
+    llm?: LlmTextCall,
+  ): Promise<ScanResult> {
     if (scope === 'project' && (workspace === undefined || workspace.length === 0)) {
       throw new Error('generate: 项目层扫描必须携带 workspace')
     }
@@ -174,19 +181,32 @@ export class KnowledgeService {
       if (workspace === undefined || workspace.length === 0) {
         throw new Error('generate: 项目层扫描必须携带 workspace')
       }
-      return scanner.scanProject(workspace, targetDir, cats)
+      return await scanner.scanProject(workspace, targetDir, cats, maxTotalChars, llm)
     }
-    return scanner.scanGlobal(targetDir, cats)
+    return await scanner.scanGlobal(targetDir, cats, maxTotalChars, llm)
   }
 
-  /** 按范围与语义分类（tags[0]）过滤列出条目（kb_list 工具用）。 */
-  listEntries(scope?: 'project' | 'global' | 'all', category?: string): KnowledgeEntry[] {
+  /** 按范围 / 语义分类（tags[0]）/ 审核状态过滤列出条目（kb_list 工具用）。 */
+  listEntries(
+    scope?: 'project' | 'global' | 'all',
+    category?: string,
+    review?: 'proposed' | 'confirmed' | 'all',
+  ): KnowledgeEntry[] {
     let entries = this.entries
     if (scope === 'project') entries = entries.filter((e) => e.scope === 'project')
     else if (scope === 'global') entries = entries.filter((e) => e.scope === 'global')
     if (category !== undefined && category.length > 0) {
       entries = entries.filter((e) => e.tags.includes(category))
     }
+    if (review === 'proposed') entries = entries.filter((e) => e.review === 'proposed')
+    else if (review === 'confirmed') entries = entries.filter((e) => e.review === 'confirmed')
     return entries
+  }
+
+  /** 确认知识条目（proposed → confirmed），返回是否成功。 */
+  confirm(id: string): boolean {
+    const ok = this.store.updateReview(id, 'confirmed', this.workspace)
+    if (ok) this.reload()
+    return ok
   }
 }

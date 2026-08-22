@@ -192,6 +192,39 @@ export class EntryStore {
     return out
   }
 
+  /** Locate an entry file path (recursive search); returns path or undefined. */
+  locate(id: string, workspace?: string): string | undefined {
+    const dirs = [this.knowledgeRoot()]
+    if (workspace !== undefined) dirs.push(this.projectDir(workspace))
+    for (const dir of dirs) {
+      for (const file of this.walkMd(dir)) {
+        if (basename(file) !== `${id}.md`) continue
+        try {
+          if (parseEntry(readFileSync(file, 'utf8')) !== undefined) return file
+        } catch {
+          // skip unreadable
+        }
+      }
+    }
+    return undefined
+  }
+
+  /** 更新条目的 review 审核状态（原位重写）；找不到返回 false。 */
+  updateReview(id: string, review: 'proposed' | 'confirmed', workspace?: string): boolean {
+    const file = this.locate(id, workspace)
+    if (file === undefined) return false
+    try {
+      const entry = parseEntry(readFileSync(file, 'utf8'))
+      if (entry === undefined) return false
+      entry.review = review
+      entry.lastUsed = new Date().toISOString().slice(0, 10)
+      writeFileSync(file, serializeEntry(entry), 'utf8')
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /** Delete an entry file (recursive search); returns the deleted path or undefined. */
   remove(id: string, workspace?: string): string | undefined {
     const dirs = [this.knowledgeRoot()]

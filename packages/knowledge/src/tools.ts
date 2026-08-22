@@ -10,6 +10,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { EntryCategory, KnowledgeEntry } from './shared/index.js'
 import { nextEntryId, type KnowledgeService } from './store.js'
+import { buildLlmCallFromContext } from './extractor.js'
 
 /** 知识条目分类枚举。 */
 const CATEGORIES: readonly EntryCategory[] = ['convention', 'fact', 'decision', 'pitfall', 'lesson']
@@ -33,6 +34,12 @@ export function registerTools(ctx: Context, service: KnowledgeService, allowGlob
         description: '按条目分类过滤；不传则检索全部分类。',
       },
       topK: { type: 'number', default: 5, description: '返回的最大命中数，默认 5。' },
+      review: {
+        type: 'string',
+        enum: ['all', 'proposed', 'confirmed'],
+        default: 'all',
+        description: '审核状态过滤：all 全部（默认）；proposed 待确认；confirmed 已确认。',
+      },
     },
     output: {
       schema: {
@@ -78,6 +85,7 @@ export function registerTools(ctx: Context, service: KnowledgeService, allowGlob
         scope: args.scope ?? 'project',
         category: args.category,
         topK,
+        review: args.review === undefined || args.review === 'all' ? undefined : args.review,
       })
       return {
         hits: hits.map((hit) => ({
@@ -197,6 +205,12 @@ export function registerTools(ctx: Context, service: KnowledgeService, allowGlob
         items: { type: 'string' },
         description: '只扫描指定语义分类（architecture/deployment/devices/conventions/glossary/decisions/environment），缺省全部。',
       },
+      mode: {
+        type: 'string',
+        enum: ['summary', 'llm'],
+        default: 'summary',
+        description: 'summary 整文件摘要（默认）；llm 用 LLM 提取结构化事实（需 llm 与默认模型可用，新条目为 proposed 待确认）。',
+      },
     },
     output: {
       schema: {
@@ -242,7 +256,11 @@ export function registerTools(ctx: Context, service: KnowledgeService, allowGlob
           throw new Error('kb_generate: project 扫描需要 workspace')
         }
       }
-      const result = service.generate(scope, ws, undefined, args.categories)
+      const llm = args.mode === 'llm' ? buildLlmCallFromContext(ctx) : undefined
+      if (args.mode === 'llm' && llm === undefined) {
+        throw new Error('kb_generate: LLM 服务不可用（llm 或默认模型未配置），请改用 summary 模式')
+      }
+      const result = await service.generate(scope, ws, undefined, args.categories, undefined, llm)
       const byCategory: { category: string; count: number }[] = []
       const counts = new Map<string, number>()
       for (const entry of result.entries) {
@@ -274,6 +292,12 @@ export function registerTools(ctx: Context, service: KnowledgeService, allowGlob
         description: '按语义分类过滤（architecture/deployment/environment 等）。',
       },
       limit: { type: 'number', default: 50, description: '最多返回多少条，默认 50。' },
+      review: {
+        type: 'string',
+        enum: ['all', 'proposed', 'confirmed'],
+        default: 'all',
+        description: '审核状态过滤：all 全部（默认）；proposed 待确认；confirmed 已确认。',
+      },
     },
     output: {
       schema: {
@@ -308,7 +332,11 @@ export function registerTools(ctx: Context, service: KnowledgeService, allowGlob
     },
     async execute(args) {
       const scope = (args.scope ?? 'all') as 'project' | 'global' | 'all'
-      const entries = service.listEntries(scope, args.category)
+      const entries = service.listEntries(
+        scope,
+        args.category,
+        args.review === undefined || args.review === 'all' ? 'all' : args.review,
+      )
       const limit = Math.max(1, Math.min(args.limit ?? 50, 200))
       return {
         total: entries.length,

@@ -75,6 +75,7 @@ export function KnowledgePanel({ api, t }: KnowledgePanelProps): JSX.Element {
   const [category, setCategory] = useState<Category>('fact')
   const [landing, setLanding] = useState<'default' | 'custom'>('default')
   const [landingDir, setLandingDir] = useState('')
+  const [mode, setMode] = useState<'summary' | 'llm'>('summary')
 
   /** 下拉框「自定义路径…」的哨兵值。 */
   const CUSTOM_KEY = '__custom__'
@@ -184,7 +185,7 @@ export function KnowledgePanel({ api, t }: KnowledgePanelProps): JSX.Element {
     setNotice(undefined)
     try {
       const ws = scope === 'project' && workspace.length > 0 ? workspace : undefined
-      const value = await unwrap(api.generate(scope, ws, activeLandingDir))
+      const value = await unwrap(api.generate(scope, ws, activeLandingDir, mode))
       setNotice({
         kind: 'ok',
         text: t('generateSucceeded', {
@@ -200,7 +201,7 @@ export function KnowledgePanel({ api, t }: KnowledgePanelProps): JSX.Element {
     } finally {
       setBusy(undefined)
     }
-  }, [activeLandingDir, api, busy, load, scope, t, workspace])
+  }, [activeLandingDir, api, busy, load, mode, scope, t, workspace])
 
   return (
     <div style={styles.section}>
@@ -256,6 +257,17 @@ export function KnowledgePanel({ api, t }: KnowledgePanelProps): JSX.Element {
           </label>
         )}
         {scope === 'global' && <span style={styles.meta}>{t('globalWriteHint')}</span>}
+        <label style={{ fontSize: 12, color: 'var(--dsw-alias-label-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {t('modeLabel')}
+          <select
+            style={styles.select}
+            value={mode}
+            onChange={(event) => setMode(event.target.value as 'summary' | 'llm')}
+          >
+            <option value="summary">{t('modeSummary')}</option>
+            <option value="llm">{t('modeLlm')}</option>
+          </select>
+        </label>
         <label style={{ fontSize: 12, color: 'var(--dsw-alias-label-tertiary)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {t('landingLabel')}
           <select
@@ -382,6 +394,11 @@ export function KnowledgePanel({ api, t }: KnowledgePanelProps): JSX.Element {
                         <p style={styles.meta}>{t('status', { status: t(`status${entry.status[0]!.toUpperCase()}${entry.status.slice(1)}`) })}</p>
                       </div>
                     )}
+                    {entry.review === 'proposed' && (
+                      <p style={{ ...styles.meta, color: 'var(--dsw-alias-state-warning-primary, #d9a13b)' }}>
+                        {t('reviewProposed')}
+                      </p>
+                    )}
                     <div style={styles.actions}>
                       <button
                         type="button"
@@ -391,6 +408,18 @@ export function KnowledgePanel({ api, t }: KnowledgePanelProps): JSX.Element {
                       >
                         {expanded ? t('collapse') : t('readMore')}
                       </button>
+                      {entry.review === 'proposed' && (
+                        <button
+                          type="button"
+                          style={{ ...styles.button, ...styles.buttonPrimary }}
+                          disabled={busy !== undefined}
+                          onClick={() => void run(entry.id, () => unwrap(
+                            workspace.length === 0 ? api.confirm(entry.id) : api.confirm(entry.id, workspace),
+                          ))}
+                        >
+                          {t('confirm')}
+                        </button>
+                      )}
                       <button
                         type="button"
                         style={{ ...styles.button, ...styles.buttonDanger }}
