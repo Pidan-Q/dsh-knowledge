@@ -4,14 +4,13 @@
 
 ## 插件一览
 
-| 插件包 | 名称 | 职责 |
-|---|---|---|
-| `@dsh-plugins/knowledge` | knowledge | 项目/全局双层知识库：`kb_search` / `kb_remember` / `kb_forget`，agent 创建时注入知识库索引 + 必读条目 |
-| `@dsh-plugins/errata` | errata | 错误捕获与预警：订阅 `tools/result` 沉淀教训（"错题本"），`tools/pre-execute` 命中失败模式时向 agent 注入预警 |
-| `@dsh-plugins/lesson-promote` | lesson-promote | 错题本晋级：把反复失败的教训晋升为技能草稿、审批落盘为正式技能（v3.0 起更名为 lesson-promote，见下） |
-| `@dsh-plugins/shared` | shared | 共享基础设施：条目 Schema（frontmatter + Markdown）、落盘存储、轻量 BM25 检索（无外部依赖） |
-| `@dsh-plugins/client-ui-errata` | client-ui-errata | 浏览器设置页「错题」面板：三态分组 + 归档/反悔/删除/一键晋级 |
-| `@dsh-plugins/client-ui-knowledge` | client-ui-knowledge | 浏览器设置页「知识库」面板：全局/项目双层增删查 + 「获取知识库」一键扫描生成（范围见 `docs/项目知识库扫描范围.md`、`docs/全局知识库扫描范围.md`） |
+| 插件包 | 名称 | 职责 | 发布状态 |
+|---|---|---|---|
+| `dsh-kb` | knowledge | 项目/全局双层知识库单包：agent 工具（`kb_search`/`kb_remember`/`kb_forget`/`kb_generate`/`kb_list`）+ 会话注入 + host Remote + 设置页「知识库」面板。V2 起支持 **LLM 事实提取**（`mode=llm`）与 **proposed/confirmed 人工确认** | ✅ npm 已发布 |
+| `@dsh-knowledge/errata` | errata | 错误捕获与预警：订阅 `tools/result` 沉淀教训（"错题本"），`tools/pre-execute` 命中失败模式时向 agent 注入预警 | 本地 |
+| `@dsh-knowledge/lesson-promote` | lesson-promote | 错题本晋级：把反复失败的教训晋升为技能草稿、审批落盘为正式技能（v3.0 起更名为 lesson-promote，见下） | 本地 |
+| `@dsh-knowledge/shared` | shared | 共享基础设施：条目 Schema（frontmatter + Markdown）、落盘存储、轻量 BM25 检索（无外部依赖） | 本地 |
+| `@dsh-knowledge/client-ui-errata` | client-ui-errata | 浏览器设置页「错题」面板：三态分组 + 归档/反悔/删除/一键晋级 | 本地 |
 
 ## Web UI 设置页面板（错题 + 知识库）
 
@@ -54,9 +53,9 @@ lesson-promote list ──► 扫描 distilled 教训 ──► 生成技能草�
 dsh plugin --profile <name> add dsh-kb
 ```
 
-> `dsh-kb@0.1.7` 单包全功能：agent 工具（kb_search/kb_remember/kb_forget）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
+> `dsh-kb@0.2.0` 单包全功能：agent 工具（`kb_search`/`kb_remember`/`kb_forget`/`kb_generate`/`kb_list`）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle，含「获取知识库」生成方式选择与 proposed 确认按钮）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
 >
-> `0.1.7` 修复 Windows 工作区下拉框：`workspaces()` 改为**调用时惰性读取** `workspaceRegistry`（0.1.6 在插件启动时同步快照，常早于 registry 的 async bootstrap 完成，快照为空；且运行中新打开的工作区无需重启插件即出现在候选列表）。
+> 版本线：`0.1.0` 首发 → `0.1.1` 多根 workspace 发现 → `0.1.5` 容量上限 + 分类子目录 + kb_generate/kb_list → `0.1.6` Windows 下拉修复（homedir 默认根 + 工作区候选）→ `0.1.7` Windows 下拉惰性读取 workspaceRegistry（新开工作区免重启即现）→ `0.2.0` **V2：LLM 事实提取 + proposed/confirmed 确认机制**。
 
 **本地开发安装（源码 link）**：三个插件包各自带 `cordis.patch.yml`（声明 `dsh.bundle.patch`），用 DSH 插件命令逐个安装到 profile。
 
@@ -87,9 +86,9 @@ dsh plugin --profile <name> add /path/to/plugins/packages/lesson-promote
   config:
     allowGlobalWrite: false   # 允许写全局层知识库（默认 false）
     injections:               # agent 创建时主动注入的必读条目（纯文本列表，全文注入）
+      - 项目编码规范：所有接口必须校验 JWT；禁止硬编码密钥。
     injectKnowledgeIndex: true # 注入知识库索引（条目标题清单）让 AI 读取，默认 true
     injectKnowledgeMax: 50     # 索引最多列出多少条标题
-      - 项目编码规范：所有接口必须校验 JWT；禁止硬编码密钥。
 - id: errata
   config:
     warnAfterFailures: 1      # 失败 ≥1 次即注入预警
@@ -125,11 +124,12 @@ dsh plugin --profile <name> add /path/to/plugins/packages/lesson-promote
 ## 存储布局
 
 ```
-<workspace>/.dsh/knowledge/<id>.md                 # 项目层知识/教训（可进 Git）
-~/.dsh/knowledge/global/<id>.md                    # 全局层知识（$DSH_HOME）
+<workspace>/.dsh/knowledge/<分类>/<id>.md          # 项目层（分类子目录，如 architecture/、deployment/）
+~/.dsh/knowledge/<分类>/<id>.md                    # 全局层（如 environment/、conventions/；旧平铺 global/ 兼容可读）
 <workspace>/.dsh/lesson-promote/drafts/<name>.md   # 技能草稿（记录字段 + 完整技能文档，可人工编辑）
 <workspace>/.dsh/skills/<name>/SKILL.md            # 正式技能（仅 approve 写入，内置 skill-filesystem 加载）
 ```
+> 条目为 frontmatter + Markdown；V2 的 LLM 提取条目带 `review: proposed`，面板确认后变 `confirmed`。
 
 ## 与已安装插件的关系
 
@@ -156,6 +156,9 @@ pnpm typecheck          # 类型检查
 
 ## 已知限制
 
-1. 无 LLM 后台提炼（`fix` 为占位文案，等待人工或后续接入 `ctx.llm` 生成）。
-2. v3.0 起 `approve` 后草稿文档的后续编辑**不会**自动同步到正式技能（已删除版本/回滚机制）；需要人工重新落盘或删除草稿后重新晋升。
-3. `dsh plugin add` 依赖 pnpm 网络与缓存路径，沙箱受限环境可能需要在权限设置中放行 pnpm 缓存目录。
+1. **LLM 提取按文件逐文件调用**（每文件一次 `ctx.llm` 请求，单批 1500 maxTokens）；《知识库思路.md》的多小文件 8K token 分批尚未实现。
+2. **检索为关键词 BM25**（标题/正文），无 embeddings 语义检索——同义改写可能搜不到。
+3. **user-profile 引导式问答未做**（全局库该分类走人工 `kb_remember` 或后续迭代）。
+4. LLM 提取依赖宿主 `llm` 与 `agentDefaultModel` 服务可用（web profile 均具备）；不可用时 `mode=llm` 报错提示改用 summary，不影响其他功能。
+5. `approve` 后草稿文档的后续编辑**不会**自动同步到正式技能（已删除版本/回滚机制）；需要人工重新落盘或删除草稿后重新晋升。
+6. `dsh plugin add` 依赖 pnpm 网络与缓存路径，沙箱受限环境可能需要在权限设置中放行 pnpm 缓存目录。
