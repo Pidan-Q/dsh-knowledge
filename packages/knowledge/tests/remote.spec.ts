@@ -196,4 +196,26 @@ describe('KnowledgeRemoteService', () => {
       rmSync(outside, { recursive: true, force: true })
     }
   })
+
+  it('workspaces 运行时惰性读取 ctx.workspaceRegistry（构造后注册也可见，消除启动竞态）', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'kb-root-'))
+    const opened = mkdtempSync(join(tmpdir(), 'kb-opened-'))
+    try {
+      mkdirSync(join(base, 'projA', '.git'), { recursive: true })
+      const ctx2 = new Context()
+      // 不传 workspaces 选项——模拟 apply 时 registry 尚未就绪（快照为空）的真实时序
+      const svc = new KnowledgeRemoteService(ctx2, { store: new EntryStore({ dshHome }), projectScanRoot: base })
+      // 服务构造后才把 registry 挂到 ctx 上：调用时必须读到，而不是启动快照
+      ctx2.provide('workspaceRegistry', { list: () => [{ path: opened, title: 'opened' }] })
+      const { workspaces } = await svc.workspaces()
+      expect(workspaces).toContain(join(base, 'projA'))
+      // dsh 已打开的工作区在调用时出现（即便晚于服务构造注册）
+      expect(workspaces).toContain(opened)
+      // 路径归一化为正斜杠
+      expect(workspaces.every((w) => !w.includes('\\'))).toBe(true)
+    } finally {
+      rmSync(base, { recursive: true, force: true })
+      rmSync(opened, { recursive: true, force: true })
+    }
+  })
 })

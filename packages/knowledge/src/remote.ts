@@ -112,8 +112,16 @@ export class KnowledgeRemoteService extends TypertRemoteService {
    */
   @Remote('workspaces')
   workspaces(): { workspaces: string[] } {
-    // dsh 已打开/注册的工作区恒在列表（即使不在扫描根下）
+    // dsh 已打开/注册的工作区恒在列表（即使不在扫描根下）。
+    // 运行时惰性读取 workspaceRegistry（而非构造时快照）：
+    // 1) 消除启动竞态——knowledge-host 的 apply 只依赖 typert，常先于
+    //    workspaceRegistry 的 async bootstrap 完成，构造时 ctx.get 严格模式
+    //    只会返回已启动（fiber state=2）的服务，快照读到的往往是空；
+    // 2) 面板打开时注册表必然已就绪，且运行中新打开的工作区下次打开面板
+    //    即出现，无需重启插件。
     const set = new Set<string>(this.registeredWorkspaces)
+    const registry = this.ctx.get('workspaceRegistry') as { list(): readonly { path: string }[] } | undefined
+    for (const record of registry?.list() ?? []) set.add(toPosix(record.path))
     for (const root of this.projectScanRoots) {
       let names: string[] = []
       try {

@@ -30,22 +30,15 @@ export interface HostConfig {
   projectScanRoot?: string | string[]
 }
 
-/** workspaceRegistry.list() 的只读视图（避免硬依赖 dsh-workspace 类型）。 */
-interface WorkspaceRecordView {
-  path: string
-  title?: string
-}
-
 /** host 平面入口：手工注册 Typert manifest 并注册 knowledge Remote 服务。 */
 export function apply(ctx: Context, rawConfig: HostConfig = {}): void {
   ctx.typert.register(TYPERT)
-  // dsh 已打开/注册的工作区（workspaceRegistry 服务存在时取其路径，缺失则忽略——
-  // 不注入该服务，避免非 web 宿主无此服务时入口启动失败）
-  const registry = ctx.get('workspaceRegistry') as { list(): WorkspaceRecordView[] } | undefined
-  const registered = registry?.list().map((record) => record.path) ?? []
+  // dsh 已打开/注册的工作区（workspaceRegistry）由 KnowledgeRemoteService.workspaces()
+  // 在调用时惰性读取——不在 apply 时快照：knowledge-host 只依赖 typert，常先于
+  // workspaceRegistry 的 async bootstrap 完成，此时 ctx.get 严格模式取不到服务，
+  // 快照恒为空；运行时读取还能让运行中新打开的工作区免重启即出现。
   new KnowledgeRemoteService(ctx, {
     allowGlobalWrite: rawConfig.allowGlobalWrite ?? false,
     projectScanRoot: rawConfig.projectScanRoot,
-    workspaces: registered,
   })
 }

@@ -54,7 +54,9 @@ lesson-promote list ──► 扫描 distilled 教训 ──► 生成技能草�
 dsh plugin --profile <name> add dsh-kb
 ```
 
-> `dsh-kb@0.1.6` 单包全功能：agent 工具（kb_search/kb_remember/kb_forget）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
+> `dsh-kb@0.1.7` 单包全功能：agent 工具（kb_search/kb_remember/kb_forget）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
+>
+> `0.1.7` 修复 Windows 工作区下拉框：`workspaces()` 改为**调用时惰性读取** `workspaceRegistry`（0.1.6 在插件启动时同步快照，常早于 registry 的 async bootstrap 完成，快照为空；且运行中新打开的工作区无需重启插件即出现在候选列表）。
 
 **本地开发安装（源码 link）**：三个插件包各自带 `cordis.patch.yml`（声明 `dsh.bundle.patch`），用 DSH 插件命令逐个安装到 profile。
 
