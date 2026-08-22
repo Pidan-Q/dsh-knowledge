@@ -10,3 +10,4 @@ docs/
 
 # 沙箱内 GitHub 主机键缓存（本机 SSH 公钥校验用，非秘密）
 .github_known_hosts
+.npm-cache/
