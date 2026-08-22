@@ -29,7 +29,9 @@ const styles: Record<string, React.CSSProperties> = {
   scopeSwitch: { display: 'flex', gap: 4, borderBottom: '1px solid var(--dsw-alias-border-l2)' },
   scope: { padding: '6px 14px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--dsw-alias-label-tertiary)', borderBottom: '2px solid transparent' },
   scopeActive: { color: 'var(--dsw-alias-label-primary)', borderBottomColor: 'var(--dsw-alias-state-business-primary)' },
-  select: { border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1)', borderRadius: 8, padding: '4px 8px', fontSize: 12, color: 'var(--dsw-alias-label-primary)' },
+  // colorScheme: 'dark' 让原生 <select> 选项弹层（Windows 默认跟随系统浅色）按深色渲染，
+  // 否则深色主题下弹层白底 + 浅色文字不可读
+  select: { border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1)', borderRadius: 8, padding: '4px 8px', fontSize: 12, color: 'var(--dsw-alias-label-primary)', colorScheme: 'dark' },
   form: { border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-3)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 },
   input: { border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1)', borderRadius: 8, padding: '6px 10px', fontSize: 13, color: 'var(--dsw-alias-label-primary)', font: 'inherit' },
   textarea: { border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1)', borderRadius: 8, padding: '6px 10px', fontSize: 13, color: 'var(--dsw-alias-label-primary)', font: 'inherit', minHeight: 64, resize: 'vertical' },

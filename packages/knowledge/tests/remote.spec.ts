@@ -175,4 +175,25 @@ describe('KnowledgeRemoteService', () => {
       rmSync(base2, { recursive: true, force: true })
     }
   })
+
+  it('workspaces 恒包含 dsh 注册的工作区（即使不在扫描根下）', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'kb-root-'))
+    const outside = mkdtempSync(join(tmpdir(), 'kb-outside-'))
+    try {
+      mkdirSync(join(base, 'projA', '.git'), { recursive: true })
+      const ctx2 = new Context()
+      const svc = new KnowledgeRemoteService(ctx2, {
+        store: new EntryStore({ dshHome }),
+        projectScanRoot: base,
+        workspaces: [outside],
+      })
+      const { workspaces } = await svc.workspaces()
+      expect(workspaces).toContain(join(base, 'projA'))
+      // 注册的工作区在扫描根之外也必须出现（dsh 打开的 workspace）
+      expect(workspaces).toContain(outside)
+    } finally {
+      rmSync(base, { recursive: true, force: true })
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
 })

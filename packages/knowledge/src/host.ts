@@ -26,15 +26,26 @@ export const inject = ['typert']
 export interface HostConfig {
   /** 是否允许写入 global 层知识库；默认 false（与插件配置一致）。 */
   allowGlobalWrite?: boolean
-  /** 项目工作区候选的扫描基目录（单根或数组）；缺省 [homedir, cwd]（见 KnowledgeRemoteServiceOptions）。 */
+  /** 项目工作区候选的扫描基目录（单根或数组）；缺省 [homedir]（见 KnowledgeRemoteServiceOptions）。 */
   projectScanRoot?: string | string[]
+}
+
+/** workspaceRegistry.list() 的只读视图（避免硬依赖 dsh-workspace 类型）。 */
+interface WorkspaceRecordView {
+  path: string
+  title?: string
 }
 
 /** host 平面入口：手工注册 Typert manifest 并注册 knowledge Remote 服务。 */
 export function apply(ctx: Context, rawConfig: HostConfig = {}): void {
   ctx.typert.register(TYPERT)
+  // dsh 已打开/注册的工作区（workspaceRegistry 服务存在时取其路径，缺失则忽略——
+  // 不注入该服务，避免非 web 宿主无此服务时入口启动失败）
+  const registry = ctx.get('workspaceRegistry') as { list(): WorkspaceRecordView[] } | undefined
+  const registered = registry?.list().map((record) => record.path) ?? []
   new KnowledgeRemoteService(ctx, {
     allowGlobalWrite: rawConfig.allowGlobalWrite ?? false,
     projectScanRoot: rawConfig.projectScanRoot,
+    workspaces: registered,
   })
 }

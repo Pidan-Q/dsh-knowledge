@@ -42,11 +42,13 @@ export interface KnowledgeRemoteServiceOptions {
   /** 是否允许写入 global 层（默认 false，与 knowledge 插件配置一致）。 */
   allowGlobalWrite?: boolean
   /**
-   * 项目工作区候选的扫描基目录（单根或数组）。缺省 [os.homedir(), process.cwd()]。
+   * 项目工作区候选的扫描基目录（单根或数组）。缺省 [os.homedir()]。
    * 每个根下一级含 .git 或 .dsh/knowledge 的目录视为项目（Windows 项目不在
    * 用户目录时，把开发盘根配进来，如 'D:/Code'）。
    */
   projectScanRoot?: string | string[]
+  /** dsh 已打开/注册的工作区路径（来自 workspaceRegistry），恒出现在候选列表。 */
+  workspaces?: readonly string[]
 }
 
 const CATEGORIES: readonly EntryCategory[] = ['convention', 'fact', 'decision', 'pitfall', 'lesson']
@@ -75,18 +77,20 @@ export class KnowledgeRemoteService extends TypertRemoteService {
   private readonly store: EntryStore
   private readonly allowGlobalWrite: boolean
   private readonly projectScanRoots: string[]
+  private readonly registeredWorkspaces: string[]
 
   constructor(ctx: Context, options: KnowledgeRemoteServiceOptions = {}) {
     super(ctx, KNOWLEDGE_NAMESPACE)
     this.store = options.store ?? new EntryStore()
     this.allowGlobalWrite = options.allowGlobalWrite ?? false
+    // 缺省只扫用户主目录（Windows 服务/CLI 启动时 cwd 常为 dsh 安装目录，不参与发现）
     const configured = options.projectScanRoot === undefined
-      ? [homedir(), process.cwd()]
+      ? [homedir()]
       : Array.isArray(options.projectScanRoot)
         ? options.projectScanRoot
         : [options.projectScanRoot]
-    // 去重（homedir 与 cwd 可能重合），保留正斜杠形态
     this.projectScanRoots = [...new Set(configured.map((root) => toPosix(root)))]
+    this.registeredWorkspaces = (options.workspaces ?? []).map((ws) => toPosix(ws))
   }
 
   /**
@@ -108,7 +112,8 @@ export class KnowledgeRemoteService extends TypertRemoteService {
    */
   @Remote('workspaces')
   workspaces(): { workspaces: string[] } {
-    const set = new Set<string>()
+    // dsh 已打开/注册的工作区恒在列表（即使不在扫描根下）
+    const set = new Set<string>(this.registeredWorkspaces)
     for (const root of this.projectScanRoots) {
       let names: string[] = []
       try {
