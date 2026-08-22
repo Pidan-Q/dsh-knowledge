@@ -1,0 +1,24 @@
+{
+  "name": "dsh-plugins",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b packages/shared packages/knowledge packages/errata packages/lesson-promote",
+    "typecheck": "tsc -b --noEmit packages/shared packages/knowledge packages/errata packages/lesson-promote",
+    "test": "vitest run",
+    "typecheck:client": "tsc -p packages/client-ui-errata/tsconfig.json && tsc -p packages/client-ui-knowledge/tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@types/react": "^18.3.31",
+    "esbuild": "^0.28.2",
+    "react": "18.3.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

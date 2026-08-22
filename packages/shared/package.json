@@ -1,0 +1,28 @@
+{
+  "name": "@dsh-plugins/shared",
+  "version": "0.1.0",
+  "description": "Shared schema, storage and BM25 search for DSH knowledge/errata plugins",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pidan-Q/dsh-knowledge.git"
+  },
+  "homepage": "https://github.com/Pidan-Q/dsh-knowledge"
+}

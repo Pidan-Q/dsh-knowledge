@@ -1,0 +1,8 @@
+- insert:
+    - id: lesson-promote
+      name: '@dsh-plugins/lesson-promote'
+      inject: [skills, agents, tools]
+    # host 平面入口：错题晋级 store（errata-host 晋级动作复用，含同名冲突守卫）。
+    - id: lesson-promote-host
+      name: '@dsh-plugins/lesson-promote/host'
+      inject: [skills]

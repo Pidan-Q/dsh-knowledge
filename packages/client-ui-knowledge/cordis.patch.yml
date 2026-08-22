@@ -1,0 +1,3 @@
+- insert:
+    - id: ui-settings-knowledge
+      name: '@dsh-plugins/client-ui-knowledge'
