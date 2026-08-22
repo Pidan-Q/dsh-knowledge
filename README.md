@@ -67,6 +67,15 @@ dsh plugin --profile <name> add /path/to/plugins/packages/lesson-promote
 
 `dsh plugin` 会自动把声明了 `dsh.bundle.patch` 的包追加进 `dsh.profile.bundles`，无需手改配置。
 
+```yaml
+- id: knowledge-host
+  config:
+    # Windows 项目不在用户目录时，把开发盘根配进来（可多根），
+    # 工作区下拉框才能发现 D:/Code 下的项目（默认 [homedir, cwd]）
+    projectScanRoot:
+      - 'D:/Code'
+```
+
 ## 配置
 
 在 profile 的 `cordis.patch.yml` 或 home 层覆盖各插件 `config`：

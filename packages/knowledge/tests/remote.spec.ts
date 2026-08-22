@@ -152,22 +152,26 @@ describe('KnowledgeRemoteService', () => {
     }
   })
 
-  it('workspaces 返回扫描基目录下含 .git 或 .dsh/knowledge 的项目目录', async () => {
+  it('workspaces 支持多扫描根：各根下含 .git 或 .dsh/knowledge 的项目目录', async () => {
     const base = mkdtempSync(join(tmpdir(), 'kb-root-'))
+    const base2 = mkdtempSync(join(tmpdir(), 'kb-root2-'))
     try {
       mkdirSync(join(base, 'projA', '.git'), { recursive: true })
       mkdirSync(join(base, 'projB', '.dsh', 'knowledge'), { recursive: true })
       mkdirSync(join(base, 'notproj'), { recursive: true })
+      mkdirSync(join(base2, 'projC', '.git'), { recursive: true })
 
       const ctx2 = new Context()
-      const svc = new KnowledgeRemoteService(ctx2, { store: new EntryStore({ dshHome }), projectScanRoot: base })
+      const svc = new KnowledgeRemoteService(ctx2, { store: new EntryStore({ dshHome }), projectScanRoot: [base, base2] })
       const { workspaces } = await svc.workspaces()
       expect(workspaces).toContain(join(base, 'projA'))
       expect(workspaces).toContain(join(base, 'projB'))
+      expect(workspaces).toContain(join(base2, 'projC'))
       expect(workspaces.some((w) => w.includes('notproj'))).toBe(false)
       expect(workspaces).toEqual([...workspaces].sort())
     } finally {
       rmSync(base, { recursive: true, force: true })
+      rmSync(base2, { recursive: true, force: true })
     }
   })
 })

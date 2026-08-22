@@ -1,6 +1,6 @@
 {
   "name": "dsh-kb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Headless + browser knowledge base for DeepSeek Harness: kb_search/kb_remember/kb_forget tools, session injection, settings panel, scan-to-generate (self-contained)",
   "type": "module",
   "main": "lib/index.js",

@@ -41,8 +41,12 @@ export interface KnowledgeRemoteServiceOptions {
   store?: EntryStore
   /** 是否允许写入 global 层（默认 false，与 knowledge 插件配置一致）。 */
   allowGlobalWrite?: boolean
-  /** 项目工作区候选的扫描基目录（缺省 $HOME）；其下一级含 .git 或 .dsh/knowledge 的目录视为项目。 */
-  projectScanRoot?: string
+  /**
+   * 项目工作区候选的扫描基目录（单根或数组）。缺省 [os.homedir(), process.cwd()]。
+   * 每个根下一级含 .git 或 .dsh/knowledge 的目录视为项目（Windows 项目不在
+   * 用户目录时，把开发盘根配进来，如 'D:/Code'）。
+   */
+  projectScanRoot?: string | string[]
 }
 
 const CATEGORIES: readonly EntryCategory[] = ['convention', 'fact', 'decision', 'pitfall', 'lesson']
@@ -70,13 +74,19 @@ function nextEntryId(entries: readonly KnowledgeEntry[], date = new Date()): str
 export class KnowledgeRemoteService extends TypertRemoteService {
   private readonly store: EntryStore
   private readonly allowGlobalWrite: boolean
-  private readonly projectScanRoot: string
+  private readonly projectScanRoots: string[]
 
   constructor(ctx: Context, options: KnowledgeRemoteServiceOptions = {}) {
     super(ctx, KNOWLEDGE_NAMESPACE)
     this.store = options.store ?? new EntryStore()
     this.allowGlobalWrite = options.allowGlobalWrite ?? false
-    this.projectScanRoot = options.projectScanRoot ?? homedir()
+    const configured = options.projectScanRoot === undefined
+      ? [homedir(), process.cwd()]
+      : Array.isArray(options.projectScanRoot)
+        ? options.projectScanRoot
+        : [options.projectScanRoot]
+    // 去重（homedir 与 cwd 可能重合），保留正斜杠形态
+    this.projectScanRoots = [...new Set(configured.map((root) => toPosix(root)))]
   }
 
   /**
@@ -92,41 +102,43 @@ export class KnowledgeRemoteService extends TypertRemoteService {
   }
 
   /**
-   * 项目工作区候选列表：扫描基目录下一级含 `.git` 或 `.dsh/knowledge`
+   * 项目工作区候选列表：每个扫描根下一级含 `.git` 或 `.dsh/knowledge`
    * （已生成过知识）的目录。供面板「获取知识库」下拉选择；不在列表内的
    * 项目可走面板「自定义路径…」。
    */
   @Remote('workspaces')
   workspaces(): { workspaces: string[] } {
     const set = new Set<string>()
-    let names: string[] = []
-    try {
-      names = readdirSync(this.projectScanRoot)
-    } catch {
-      names = []
-    }
-    for (const name of names) {
-      if (name.startsWith('.')) continue
-      const dir = join(this.projectScanRoot, name)
-      let st
+    for (const root of this.projectScanRoots) {
+      let names: string[] = []
       try {
-        st = statSync(dir)
+        names = readdirSync(root)
       } catch {
         continue
       }
-      if (!st.isDirectory()) continue
-      try {
-        if (statSync(join(dir, '.git')).isDirectory()) {
-          set.add(toPosix(dir))
+      for (const name of names) {
+        if (name.startsWith('.')) continue
+        const dir = join(root, name)
+        let st
+        try {
+          st = statSync(dir)
+        } catch {
           continue
         }
-      } catch {
-        // 非 git 项目，继续看知识库目录
-      }
-      try {
-        if (statSync(join(dir, '.dsh', 'knowledge')).isDirectory()) set.add(toPosix(dir))
-      } catch {
-        // 无知识库目录，跳过
+        if (!st.isDirectory()) continue
+        try {
+          if (statSync(join(dir, '.git')).isDirectory()) {
+            set.add(toPosix(dir))
+            continue
+          }
+        } catch {
+          // 非 git 项目，继续看知识库目录
+        }
+        try {
+          if (statSync(join(dir, '.dsh', 'knowledge')).isDirectory()) set.add(toPosix(dir))
+        } catch {
+          // 无知识库目录，跳过
+        }
       }
     }
     return { workspaces: [...set].sort() }

@@ -26,8 +26,8 @@ export const inject = ['typert']
 export interface HostConfig {
   /** 是否允许写入 global 层知识库；默认 false（与插件配置一致）。 */
   allowGlobalWrite?: boolean
-  /** 项目工作区候选的扫描基目录；缺省 $HOME（见 KnowledgeRemoteServiceOptions）。 */
-  projectScanRoot?: string
+  /** 项目工作区候选的扫描基目录（单根或数组）；缺省 [homedir, cwd]（见 KnowledgeRemoteServiceOptions）。 */
+  projectScanRoot?: string | string[]
 }
 
 /** host 平面入口：手工注册 Typert manifest 并注册 knowledge Remote 服务。 */
