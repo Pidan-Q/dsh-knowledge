@@ -1,13 +1,13 @@
 /**
  * Filesystem-backed entry storage for the DSH knowledge/errata plugins.
  *
- * Layout:
- *   global : <dshHome>/knowledge/global/<id>.md
- *   project: <workspace>/.dsh/knowledge/<id>.md
+ * Layout（V1.5 分类子目录；读写均递归，兼容旧平铺）：
+ *   global : <dshHome>/knowledge/（global/ 平铺旧条目 + <分类>/ 子目录）
+ *   project: <workspace>/.dsh/knowledge/（平铺旧条目 + <分类>/ 子目录）
  */
 
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { parseEntry, serializeEntry, type KnowledgeEntry } from './schema.js'
 
 export interface StorageOptions {
@@ -44,8 +44,39 @@ export class EntryStore {
     this.dshHome = opts.dshHome ?? resolveDshHome()
   }
 
+  private knowledgeRoot(): string {
+    return join(this.dshHome, 'knowledge')
+  }
+
+  /** 旧版/手动写入的全局层平铺目录（write() 仍写这里，list/read 递归可见）。 */
   private globalDir(): string {
     return join(this.dshHome, 'knowledge', 'global')
+  }
+
+  /** 递归收集目录下全部 .md 文件绝对路径（含子目录）。 */
+  private walkMd(dir: string): string[] {
+    const out: string[] = []
+    const visit = (current: string): void => {
+      let names: string[]
+      try {
+        names = readdirSync(current)
+      } catch {
+        return
+      }
+      for (const name of names) {
+        const full = join(current, name)
+        let st
+        try {
+          st = statSync(full)
+        } catch {
+          continue
+        }
+        if (st.isDirectory()) visit(full)
+        else if (name.endsWith('.md')) out.push(full)
+      }
+    }
+    visit(dir)
+    return out
   }
 
   private projectDir(workspace: string): string {
@@ -74,18 +105,12 @@ export class EntryStore {
     return file
   }
 
-  /** List all persisted entries inside one explicit directory（自定义落盘浏览），newest first. */
+  /** List all persisted entries inside one explicit directory（递归含子目录），newest first. */
   listDir(dir: string): KnowledgeEntry[] {
     const out: KnowledgeEntry[] = []
-    let files: string[]
-    try {
-      files = readdirSync(dir).filter((f) => f.endsWith('.md'))
-    } catch {
-      return []
-    }
-    for (const file of files) {
+    for (const file of this.walkMd(dir)) {
       try {
-        const parsed = parseEntry(readFileSync(join(dir, file), 'utf8'))
+        const parsed = parseEntry(readFileSync(file, 'utf8'))
         if (parsed !== undefined) out.push(parsed)
       } catch {
         // skip unreadable entries
@@ -95,17 +120,19 @@ export class EntryStore {
     return out
   }
 
-  /** Read a single entry by id, searching global then project layers. */
+  /** Read a single entry by id, searching global then project layers（递归含子目录）. */
   read(id: string, workspace?: string): KnowledgeEntry | undefined {
-    const dirs = [this.globalDir()]
+    const dirs = [this.knowledgeRoot()]
     if (workspace !== undefined) dirs.push(this.projectDir(workspace))
     for (const dir of dirs) {
-      const file = join(dir, `${id}.md`)
-      try {
-        const parsed = parseEntry(readFileSync(file, 'utf8'))
-        if (parsed !== undefined) return parsed
-      } catch {
-        // missing or unreadable -> try next layer
+      for (const file of this.walkMd(dir)) {
+        if (basename(file) !== `${id}.md`) continue
+        try {
+          const parsed = parseEntry(readFileSync(file, 'utf8'))
+          if (parsed !== undefined) return parsed
+        } catch {
+          // skip unreadable
+        }
       }
     }
     return undefined
@@ -117,12 +144,16 @@ export class EntryStore {
    * 条目遮蔽项目层条目。
    */
   readProject(id: string, workspace: string): KnowledgeEntry | undefined {
-    const file = join(this.projectDir(workspace), `${id}.md`)
-    try {
-      return parseEntry(readFileSync(file, 'utf8'))
-    } catch {
-      return undefined
+    for (const file of this.walkMd(this.projectDir(workspace))) {
+      if (basename(file) !== `${id}.md`) continue
+      try {
+        const parsed = parseEntry(readFileSync(file, 'utf8'))
+        if (parsed !== undefined) return parsed
+      } catch {
+        // skip unreadable
+      }
     }
+    return undefined
   }
 
   /**
@@ -130,30 +161,27 @@ export class EntryStore {
    * 与 {@link readProject} 配套，保证项目层语义的删除不误伤全局层。
    */
   removeProject(id: string, workspace: string): string | undefined {
-    const file = join(this.projectDir(workspace), `${id}.md`)
-    try {
-      rmSync(file)
-      return file
-    } catch {
-      return undefined
+    for (const file of this.walkMd(this.projectDir(workspace))) {
+      if (basename(file) !== `${id}.md`) continue
+      try {
+        rmSync(file)
+        return file
+      } catch {
+        return undefined
+      }
     }
+    return undefined
   }
 
-  /** List all persisted entries (global + optional project), newest first. */
+  /** List all persisted entries (global root + optional project, recursive), newest first. */
   list(workspace?: string): KnowledgeEntry[] {
     const out: KnowledgeEntry[] = []
-    const dirs = [this.globalDir()]
+    const dirs = [this.knowledgeRoot()]
     if (workspace !== undefined) dirs.push(this.projectDir(workspace))
     for (const dir of dirs) {
-      let files: string[]
-      try {
-        files = readdirSync(dir).filter((f) => f.endsWith('.md'))
-      } catch {
-        continue
-      }
-      for (const file of files) {
+      for (const file of this.walkMd(dir)) {
         try {
-          const parsed = parseEntry(readFileSync(join(dir, file), 'utf8'))
+          const parsed = parseEntry(readFileSync(file, 'utf8'))
           if (parsed !== undefined) out.push(parsed)
         } catch {
           // skip unreadable entries
@@ -164,17 +192,19 @@ export class EntryStore {
     return out
   }
 
-  /** Delete an entry file; returns the deleted path or undefined. */
+  /** Delete an entry file (recursive search); returns the deleted path or undefined. */
   remove(id: string, workspace?: string): string | undefined {
-    const dirs = [this.globalDir()]
+    const dirs = [this.knowledgeRoot()]
     if (workspace !== undefined) dirs.push(this.projectDir(workspace))
     for (const dir of dirs) {
-      const file = join(dir, `${id}.md`)
-      try {
-        rmSync(file)
-        return file
-      } catch {
-        // continue
+      for (const file of this.walkMd(dir)) {
+        if (basename(file) !== `${id}.md`) continue
+        try {
+          rmSync(file)
+          return file
+        } catch {
+          return undefined
+        }
       }
     }
     return undefined

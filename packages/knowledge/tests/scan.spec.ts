@@ -4,10 +4,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { EntryStore, parseEntry, serializeEntry } from '@dsh-knowledge/shared'
+import { EntryStore, parseEntry, serializeEntry } from '../src/shared/index.js'
 import { KnowledgeScanner, globToRegExp, isProjectExcluded, toPosix } from '../src/scan'
 
 describe('toPosix（Windows 路径规范化）', () => {
@@ -121,6 +121,59 @@ describe('KnowledgeScanner.scanProject', () => {
     expect(second.generated).toBe(0)
     expect(second.skipped).toBe(first.generated)
     expect(store.list(workspace).length).toBe(first.generated)
+  })
+
+  it('V1.5 分类子目录落盘：条目在 <分类>/ 子目录，递归 list 可见且幂等', () => {
+    const first = scanner.scanProject(workspace)
+    expect(first.generated).toBe(4)
+    // 每个条目落在 <ws>/.dsh/knowledge/<语义分类>/<id>.md
+    for (const entry of first.entries) {
+      const categoryDir = join(workspace, '.dsh', 'knowledge', entry.tags[0]!)
+      expect(existsSync(join(categoryDir, `${entry.id}.md`))).toBe(true)
+    }
+    // 递归 list 能看到子目录条目（数量一致）
+    expect(store.list(workspace).length).toBe(4)
+    // 平铺旧布局条目仍可被递归 list 读到（兼容）
+    const legacyDir = join(workspace, '.dsh', 'knowledge')
+    mkdirSync(legacyDir, { recursive: true })
+    writeFileSync(join(legacyDir, 'kb-20260101-001.md'), [
+      '---',
+      'id: kb-20260101-001',
+      'scope: project',
+      'category: fact',
+      'title: 旧条目',
+      'created: 2026-01-01',
+      'last_used: 2026-01-01',
+      'hit_count: 0',
+      'confidence: 0.5',
+      'status: raw',
+      '---',
+      '',
+      '旧平铺条目正文',
+      '',
+    ].join('\n'))
+    expect(store.list(workspace).length).toBe(5)
+    // 幂等：再扫描仍不重复（旧条目无 source，不影响新条目幂等）
+    const again = scanner.scanProject(workspace)
+    expect(again.generated).toBe(0)
+  })
+
+  it('V1.5 容量上限：超限停止，高优先级分类先处理', () => {
+    // 大文件撑爆小预算：只允许 ~120 字符
+    writeFileSync(join(workspace, 'docs', 'architecture.md'), '# 架构\n\n' + 'x'.repeat(300))
+    writeFileSync(join(workspace, 'package.json'), JSON.stringify({ name: 'big', scripts: { a: '1' }, dependencies: { b: '2' } }))
+    const result = scanner.scanProject(workspace, undefined, undefined, 150)
+    // 预算只够处理最前面的文件（architecture 优先级最高，README 先于其他）
+    expect(result.entries.length).toBeGreaterThan(0)
+    expect(result.entries.length).toBeLessThan(4)
+    // 先处理的必须是高优先级分类
+    expect(result.entries[0]!.tags[0]).toBe('architecture')
+  })
+
+  it('V1.5 分类过滤：只扫描指定分类', () => {
+    const result = scanner.scanProject(workspace, undefined, ['deployment'])
+    expect(result.entries.length).toBe(1)
+    expect(result.entries[0]!.tags[0]).toBe('deployment')
   })
 })
 

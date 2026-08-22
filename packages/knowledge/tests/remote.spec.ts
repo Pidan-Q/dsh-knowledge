@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
-import { EntryStore } from '@dsh-knowledge/shared'
+import { EntryStore } from '../src/shared/index.js'
 import { KnowledgeRemoteService, type RememberInput } from '../src/remote'
 
 describe('KnowledgeRemoteService', () => {
@@ -98,8 +98,9 @@ describe('KnowledgeRemoteService', () => {
       expect(entry.workspace).toBe(workspace)
       expect(entry.source).toContain(workspace)
     }
-    // 已落盘为 frontmatter + Markdown 的 md 文件
-    expect(existsSync(join(workspace, '.dsh', 'knowledge', `${first.entries[0]!.id}.md`))).toBe(true)
+    // 已落盘为 frontmatter + Markdown 的 md 文件（分类子目录：<分类>/<id>.md）
+    const entry0 = first.entries[0]!
+    expect(existsSync(join(workspace, '.dsh', 'knowledge', entry0.tags[0]!, `${entry0.id}.md`))).toBe(true)
 
     const second = await service.generate('project', workspace)
     expect(second.generated).toBe(0)

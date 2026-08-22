@@ -62,9 +62,11 @@ export const GLOBAL_SOURCES: readonly ScanSource[] = [
 ]
 
 const MAX_FILE_BYTES = 256 * 1024
-const MAX_BODY_CHARS = 8 * 1024
+const MAX_BODY_CHARS = 10 * 1000
 const MAX_HEAD_LINES = 40
 const MAX_HEADINGS = 30
+/** 单次扫描的总容量上限（所有条目 body 累计字符数）；超限停止，优先保留高优先级分类。 */
+export const MAX_TOTAL_SCAN_CHARS = 500_000
 const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '.dsh', 'dist', 'build', 'out', 'coverage', 'lib'])
 const EXCLUDED_FILES = new Set([
   '.env', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'npm-shrinkwrap.json',
@@ -307,11 +309,19 @@ export class KnowledgeScanner {
   }
 
   /** 项目层扫描：按 PROJECT_SOURCES 匹配 workspace 下文件并生成条目。
-   * @param targetDir - 用户自定义落盘目录；缺省写入 <workspace>/.dsh/knowledge。 */
-  scanProject(workspace: string, targetDir?: string): ScanResult {
+   * @param targetDir - 用户自定义落盘目录；缺省写入 <workspace>/.dsh/knowledge/<分类>/。
+   * @param categories - 只扫描指定语义分类；缺省全部分类。
+   * 容量：累计消耗字符数达 MAX_TOTAL_SCAN_CHARS 后停止（按分类优先级 + 文件名序，
+   * 高优先级分类先处理）。 */
+  scanProject(
+    workspace: string,
+    targetDir?: string,
+    categories?: readonly ScanCategory[],
+    maxTotalChars: number = MAX_TOTAL_SCAN_CHARS,
+  ): ScanResult {
     const result: ScanResult = { scanned: 0, generated: 0, skipped: 0, entries: [] }
     const today = new Date().toISOString().slice(0, 10)
-    // 自定义落盘时按该目录读既有条目做幂等与序号（默认仍走层目录）
+    // 自定义落盘时按该目录读既有条目做幂等与序号（默认仍走层目录，递归含子目录）
     const existing = targetDir === undefined ? this.store.list(workspace) : this.store.listDir(targetDir)
     const seen = new Set(existing.filter((e) => e.source !== undefined).map((e) => `${e.scope}::${e.source}`))
     const ids = existing.slice()
@@ -332,7 +342,17 @@ export class KnowledgeScanner {
       }
     }
 
-    for (const [file, semantic] of [...matched.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    // 分类优先级（PROJECT_SOURCES 行序，高优先级先处理）+ 文件名序
+    const priority = new Map(PROJECT_SOURCES.map((source, index) => [source.category, index]))
+    const ordered = [...matched.entries()].sort((a, b) => {
+      const pa = priority.get(a[1]) ?? 99
+      const pb = priority.get(b[1]) ?? 99
+      return pa !== pb ? pa - pb : a[0].localeCompare(b[0])
+    })
+
+    let consumed = 0
+    for (const [file, semantic] of ordered) {
+      if (categories !== undefined && !categories.includes(semantic)) continue
       const full = join(workspace, file)
       // 落盘路径统一规范化为正斜杠（Windows 往返无损，幂等键稳定）
       const fullPosix = toPosix(full)
@@ -359,6 +379,9 @@ export class KnowledgeScanner {
         result.skipped += 1
         continue
       }
+      // 总容量预算：累计消耗超限即停止处理后续文件（高优先级文件已先处理）
+      consumed += body.length
+      if (consumed > maxTotalChars) break
       const key = `project::${fullPosix}`
       if (seen.has(key)) {
         result.skipped += 1
@@ -381,8 +404,10 @@ export class KnowledgeScanner {
       }
       ids.push(entry)
       seen.add(key)
-      if (targetDir === undefined) this.store.write(entry, workspace)
-      else this.store.writeTo(entry, toPosix(targetDir))
+      // 分类子目录落盘：<root>/<语义分类>/<id>.md
+      const sub = toPosix(semantic)
+      if (targetDir === undefined) this.store.writeTo(entry, join(join(workspace, '.dsh', 'knowledge'), sub))
+      else this.store.writeTo(entry, join(toPosix(targetDir), sub))
       result.generated += 1
       result.entries.push(entry)
     }
@@ -390,8 +415,13 @@ export class KnowledgeScanner {
   }
 
   /** 全局层扫描：DSH home 配置 + 少量只读系统信息源。
-   * @param targetDir - 用户自定义落盘目录；缺省写入 <dshHome>/knowledge/global。 */
-  scanGlobal(targetDir?: string): ScanResult {
+   * @param targetDir - 用户自定义落盘目录；缺省写入 <dshHome>/knowledge/<分类>/。
+   * @param categories - 只扫描指定语义分类；缺省全部分类。 */
+  scanGlobal(
+    targetDir?: string,
+    categories?: readonly ScanCategory[],
+    maxTotalChars: number = MAX_TOTAL_SCAN_CHARS,
+  ): ScanResult {
     const result: ScanResult = { scanned: 0, generated: 0, skipped: 0, entries: [] }
     const today = new Date().toISOString().slice(0, 10)
     const existing = targetDir === undefined ? this.store.list() : this.store.listDir(targetDir)
@@ -440,7 +470,9 @@ export class KnowledgeScanner {
       }
     }
 
+    let consumed = 0
     for (const source of sources) {
+      if (categories !== undefined && !categories.includes(source.category)) continue
       let buf: Buffer
       try {
         if (statSync(source.path).size > MAX_FILE_BYTES) {
@@ -463,6 +495,9 @@ export class KnowledgeScanner {
         result.skipped += 1
         continue
       }
+      // 总容量预算：超限即停止（全局源少，一般不会触发）
+      consumed += body.length
+      if (consumed > maxTotalChars) break
       // 落盘路径统一规范化为正斜杠（Windows 往返无损，幂等键稳定）
       const pathPosix = toPosix(source.path)
       const key = `global::${pathPosix}`
@@ -486,8 +521,10 @@ export class KnowledgeScanner {
       }
       ids.push(entry)
       seen.add(key)
-      if (targetDir === undefined) this.store.write(entry)
-      else this.store.writeTo(entry, toPosix(targetDir))
+      // 分类子目录落盘：<dshHome>/knowledge/<语义分类>/<id>.md
+      const sub = toPosix(source.category)
+      if (targetDir === undefined) this.store.writeTo(entry, join(join(this.dshHome, 'knowledge'), sub))
+      else this.store.writeTo(entry, join(toPosix(targetDir), sub))
       result.generated += 1
       result.entries.push(entry)
     }

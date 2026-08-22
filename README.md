@@ -54,7 +54,7 @@ lesson-promote list ──► 扫描 distilled 教训 ──► 生成技能草�
 dsh plugin --profile <name> add dsh-kb
 ```
 
-> `dsh-kb@0.1.0` 单包全功能：agent 工具（kb_search/kb_remember/kb_forget）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
+> `dsh-kb@0.1.5` 单包全功能：agent 工具（kb_search/kb_remember/kb_forget）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
 
 **本地开发安装（源码 link）**：三个插件包各自带 `cordis.patch.yml`（声明 `dsh.bundle.patch`），用 DSH 插件命令逐个安装到 profile。
 
@@ -104,6 +104,8 @@ dsh plugin --profile <name> add /path/to/plugins/packages/lesson-promote
 | 工具 | 说明 |
 |---|---|
 | `kb_search` | 检索知识库（query 必填；scope/category/topK 可选） |
+| `kb_generate` | 按扫描范围生成知识条目（scope 必填；project 需 workspace；categories 可选；总容量上限 50 万字符、分类子目录落盘） |
+| `kb_list` | 列出知识库条目（scope/category/limit 可选） |
 | `kb_remember` | 写入知识条目（global 写入需 `allowGlobalWrite`） |
 | `kb_forget` | 删除条目 |
 | `lesson-promote` | `list` 列出草稿（自动扫描可晋升教训并生成草稿）；`approve <name>` 批准并把草稿落盘为正式技能（含同名冲突守卫，已装插件优先） |

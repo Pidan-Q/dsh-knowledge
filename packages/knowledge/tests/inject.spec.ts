@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import type { KnowledgeEntry } from '@dsh-knowledge/shared'
+import type { KnowledgeEntry } from '../src/shared/index.js'
 import { buildKnowledgeIndex, registerInjection } from '../src/inject'
 
 const entry = (over: Partial<KnowledgeEntry>): KnowledgeEntry => ({

@@ -15,6 +15,7 @@ import {
   type EntryCategory,
   type KnowledgeEntry,
 } from './shared/index.js'
+import { KnowledgeScanner, type ScanCategory, type ScanResult } from './scan.js'
 
 /** KnowledgeService 构造选项。 */
 export interface KnowledgeServiceOptions {
@@ -148,5 +149,44 @@ export class KnowledgeService {
   /** 列出当前可见的全部条目（全局层 + 启用的项目层），按创建时间倒序。 */
   list(): KnowledgeEntry[] {
     return this.entries.slice()
+  }
+
+  /**
+   * 按扫描范围生成知识条目（kb_generate 工具与 remote generate 共用；
+   * 扫描器复用 this.store，保证与工具读写同一层）。
+   * @param scope - project 扫工作区、global 扫 DSH home。
+   * @param workspace - 项目层必填（宿主平面无「当前会话」语义）。
+   * @param targetDir - 自定义落盘目录（缺省按层默认 + 分类子目录）。
+   * @param categories - 只扫描指定语义分类（缺省全部）。
+   */
+  generate(
+    scope: 'project' | 'global',
+    workspace?: string,
+    targetDir?: string,
+    categories?: readonly string[],
+  ): ScanResult {
+    if (scope === 'project' && (workspace === undefined || workspace.length === 0)) {
+      throw new Error('generate: 项目层扫描必须携带 workspace')
+    }
+    const scanner = new KnowledgeScanner(this.store, this.store.dshHome)
+    const cats = categories as readonly ScanCategory[] | undefined
+    if (scope === 'project') {
+      if (workspace === undefined || workspace.length === 0) {
+        throw new Error('generate: 项目层扫描必须携带 workspace')
+      }
+      return scanner.scanProject(workspace, targetDir, cats)
+    }
+    return scanner.scanGlobal(targetDir, cats)
+  }
+
+  /** 按范围与语义分类（tags[0]）过滤列出条目（kb_list 工具用）。 */
+  listEntries(scope?: 'project' | 'global' | 'all', category?: string): KnowledgeEntry[] {
+    let entries = this.entries
+    if (scope === 'project') entries = entries.filter((e) => e.scope === 'project')
+    else if (scope === 'global') entries = entries.filter((e) => e.scope === 'global')
+    if (category !== undefined && category.length > 0) {
+      entries = entries.filter((e) => e.tags.includes(category))
+    }
+    return entries
   }
 }
