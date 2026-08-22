@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const packages = ['client-ui-errata', 'client-ui-knowledge']
+const packages = ['knowledge', 'client-ui-errata']
 
 for (const pkg of packages) {
   const dir = join(root, 'packages', pkg)

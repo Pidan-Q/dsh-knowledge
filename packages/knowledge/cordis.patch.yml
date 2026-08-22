@@ -1,8 +1,8 @@
 - insert:
     - id: knowledge
-      name: '@dsh-knowledge/knowledge'
+      name: 'dsh-kb'
       inject: [tools, agents]
     # host 平面入口：知识库设置页 Remote 数据源（手工注册 Typert manifest）。
     - id: knowledge-host
-      name: '@dsh-knowledge/knowledge/host'
+      name: 'dsh-kb/host'
       inject: [typert]

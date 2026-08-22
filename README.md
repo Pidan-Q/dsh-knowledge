@@ -48,13 +48,13 @@ lesson-promote list ──► 扫描 distilled 教训 ──► 生成技能草�
 
 ## 安装
 
-**已发布到 npm（自包含，无外部依赖）**：
+**已发布到 npm（headless + UI 单包，自包含）**：
 
 ```bash
-dsh plugin --profile <name> add @dsh-knowledge/knowledge
+dsh plugin --profile <name> add dsh-kb
 ```
 
-> `@dsh-knowledge/knowledge@0.1.0` 已内嵌 shared 存储层（`lib/shared/`），唯一运行依赖是 zod，即安即用。设置面板（client-ui-knowledge）与 errata/lesson-promote 暂未发布，留在本仓库本地安装。
+> `dsh-kb@0.1.0` 单包全功能：agent 工具（kb_search/kb_remember/kb_forget）+ 会话注入 + host Remote + 设置页「知识库」面板（`dsh.client` 浏览器 bundle）。内嵌 shared 存储层，唯一运行依赖 zod。errata/lesson-promote/client-ui-errata 暂未发布，留在本仓库本地安装。
 
 **本地开发安装（源码 link）**：三个插件包各自带 `cordis.patch.yml`（声明 `dsh.bundle.patch`），用 DSH 插件命令逐个安装到 profile。
 

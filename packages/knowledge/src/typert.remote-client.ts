@@ -54,7 +54,7 @@ const workspaceParam = {
   name: 'workspace',
   wire: 'workspace',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#workspace', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: 'dsh-kb#workspace', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -64,7 +64,7 @@ const scopeParam = {
   source: 'json' as const,
   codec: {
     mode: 'strict' as const,
-    typeSymbol: '@dsh-knowledge/knowledge#scope',
+    typeSymbol: 'dsh-kb#scope',
     schema: z.enum(['project', 'global']),
   },
 }
@@ -73,7 +73,7 @@ const dirParam = {
   name: 'dir',
   wire: 'dir',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#dir', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: 'dsh-kb#dir', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -81,7 +81,7 @@ const targetParam = {
   name: 'target',
   wire: 'target',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#target', schema: z.string().optional() },
+  codec: { mode: 'strict' as const, typeSymbol: 'dsh-kb#target', schema: z.string().optional() },
   acceptsUndefined: true as const,
 }
 
@@ -89,21 +89,21 @@ const idParam = {
   name: 'id',
   wire: 'id',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#id', schema: z.string() },
+  codec: { mode: 'strict' as const, typeSymbol: 'dsh-kb#id', schema: z.string() },
 }
 
 const inputParam = {
   name: 'input',
   wire: 'input',
   source: 'json' as const,
-  codec: { mode: 'strict' as const, typeSymbol: '@dsh-knowledge/knowledge#remember:input', schema: rememberInputSchema },
+  codec: { mode: 'strict' as const, typeSymbol: 'dsh-kb#remember:input', schema: rememberInputSchema },
 }
 
 export const TYPERT_REMOTE = {
-  package: '@dsh-knowledge/knowledge',
+  package: 'dsh-kb',
   descriptors: [
     {
-      id: '@dsh-knowledge/knowledge#knowledge/list',
+      id: 'dsh-kb#knowledge/list',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'list',
@@ -111,13 +111,13 @@ export const TYPERT_REMOTE = {
       parameters: [workspaceParam, dirParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-knowledge/knowledge#knowledge/list:result',
+        typeSymbol: 'dsh-kb#knowledge/list:result',
         schema: listResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 76, column: 3 },
     },
     {
-      id: '@dsh-knowledge/knowledge#knowledge/remember',
+      id: 'dsh-kb#knowledge/remember',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'remember',
@@ -125,13 +125,13 @@ export const TYPERT_REMOTE = {
       parameters: [inputParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-knowledge/knowledge#knowledge/remember:result',
+        typeSymbol: 'dsh-kb#knowledge/remember:result',
         schema: rememberResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 85, column: 3 },
     },
     {
-      id: '@dsh-knowledge/knowledge#knowledge/forget',
+      id: 'dsh-kb#knowledge/forget',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'forget',
@@ -139,13 +139,13 @@ export const TYPERT_REMOTE = {
       parameters: [idParam, workspaceParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-knowledge/knowledge#knowledge/forget:result',
+        typeSymbol: 'dsh-kb#knowledge/forget:result',
         schema: forgetResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 122, column: 3 },
     },
     {
-      id: '@dsh-knowledge/knowledge#knowledge/generate',
+      id: 'dsh-kb#knowledge/generate',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'generate',
@@ -153,13 +153,13 @@ export const TYPERT_REMOTE = {
       parameters: [scopeParam, workspaceParam, targetParam],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-knowledge/knowledge#knowledge/generate:result',
+        typeSymbol: 'dsh-kb#knowledge/generate:result',
         schema: generateResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 142, column: 3 },
     },
     {
-      id: '@dsh-knowledge/knowledge#knowledge/workspaces',
+      id: 'dsh-kb#knowledge/workspaces',
       service: 'knowledge',
       namespace: 'knowledge',
       method: 'workspaces',
@@ -167,7 +167,7 @@ export const TYPERT_REMOTE = {
       parameters: [],
       result: {
         mode: 'strict' as const,
-        typeSymbol: '@dsh-knowledge/knowledge#knowledge/workspaces:result',
+        typeSymbol: 'dsh-kb#knowledge/workspaces:result',
         schema: workspacesResultSchema,
       },
       sourceLocation: { file: 'packages/knowledge/src/remote.ts', line: 88, column: 3 },

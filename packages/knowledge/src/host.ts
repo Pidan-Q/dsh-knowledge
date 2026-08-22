@@ -6,7 +6,7 @@
  * agents/tools，可在 host 平面独立挂载：
  *
  *   - id: knowledge-host
- *     name: '@dsh-knowledge/knowledge/host'
+ *     name: 'dsh-kb/host'
  */
 
 import type { Context } from '@deepseek-ai/cordis'

@@ -1,7 +1,7 @@
 /**
  * 知识库面板共享的 wire 类型与 Remote 调用封装。
  *
- * 客户端包不依赖宿主包（@dsh-knowledge/knowledge）；wire 类型在此与宿主
+ * 客户端包不依赖宿主包（dsh-kb）；wire 类型在此与宿主
  * manifest / shared/schema.ts 对齐手写。
  *
  * 调用约定：`ctx.remote.knowledge.*` 是**位置参数**方法（运行时按描述符
